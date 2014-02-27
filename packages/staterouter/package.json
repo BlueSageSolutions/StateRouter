@@ -1,0 +1,12 @@
+{
+    "name": "staterouter",
+    "type": "code",
+    "creator": "Jonathan Janisch",
+    "summary": "UI state router supporting nested states",
+    "detailedDescription": "UI state router supporting nested states",
+    "version": "0.1.0",
+    "compatVersion": "0.1.0",
+    "format": "1",
+    "local": true,
+    "requires": []
+}
