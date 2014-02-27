@@ -1,5 +1,10 @@
 Ext.define('StateRouter.staterouter.Router', {
-    requires: ['StateRouter.staterouter.State'],
+    requires: [
+        'StateRouter.staterouter.PromiseResolver',
+        'StateRouter.staterouter.State',
+        'StateRouter.staterouter.transitions.FadeTransition',
+        'StateRouter.staterouter.transitions.BaseViewTransition'
+    ],
 
     singleton: true,
 

@@ -1,5 +1,9 @@
 Ext.define('StateRouter.staterouter.State', {
 
+    requires: [
+        'StateRouter.staterouter.PathNode'
+    ],
+
     config: {
         path: [], // an array of states leading up to and including this path
         allParams: {}
