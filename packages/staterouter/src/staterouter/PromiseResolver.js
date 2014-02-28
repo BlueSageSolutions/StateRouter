@@ -100,7 +100,8 @@ Ext.define('StateRouter.staterouter.PromiseResolver', {
             i,
             stopIndex = toIndex || toPath.length,
             pathNode,
-            nullablePromise;
+            nullablePromise,
+            numPromises = 0;
 
         for (i = fromIndex; i < stopIndex; i++) {
             pathNode = toPath[i];
@@ -109,12 +110,18 @@ Ext.define('StateRouter.staterouter.PromiseResolver', {
 
             if (nullablePromise) {
                 r = nullablePromise;
+                numPromises++;
             }
         }
-        r = r.then(function (results) {
-            me.storeControllerResolvableResults(results, state);
-            return me.emptyPromise();
-        });
+
+        // If we have at least one promise, then we need
+        // to store the previous promises results.
+        if (numPromises > 0) {
+            r = r.then(function (results) {
+                me.storeControllerResolvableResults(results, state);
+                return me.emptyPromise();
+            });
+        }
 
         return r;
     }

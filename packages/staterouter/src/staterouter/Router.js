@@ -254,14 +254,21 @@ Ext.define('StateRouter.staterouter.Router', {
 
         RSVP.all(resolveBeforeTransition).then(function () {
 
-            if (me.currentState !== null) {
-                // No one canceled state transition, proceed to exit controllers we're not keeping
-                me.stopDiscardedControllers(keep, fromPath);
-            }
+            // This has to be wrapped in a promise, otherwise
+            // exceptions are being eaten by RSVP
+            return new RSVP.Promise(function (resolve) {
 
-            // Enter the new controllers
-            me.startNewControllers(keep, toPath);
+                if (me.currentState !== null) {
+                    // No one canceled state transition, proceed to exit controllers we're not keeping
+                    me.stopDiscardedControllers(keep, fromPath);
+                }
 
+                // Enter the new controllers
+                me.startNewControllers(keep, toPath);
+
+                resolve();
+            });
+        }).then(function() {
             me.currentState = toState;
         }, function (error) {
 
