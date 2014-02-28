@@ -18,11 +18,6 @@ Ext.define('StateRouter.staterouter.State', {
             return false;
         }
 
-        if (this.getDefinitionName() !== otherState.getDefinitionName) {
-            return false;
-        }
-
-        // TODO: Can we simply test if allParams === otherState.allParams (?)
         for (var i = 0; i < this.path.length; i++) {
             if (!this.path[i].isEqual(otherState.path[i])) {
                 return false;
