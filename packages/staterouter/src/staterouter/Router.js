@@ -1,6 +1,6 @@
 Ext.define('StateRouter.staterouter.Router', {
     requires: [
-        'StateRouter.staterouter.PromiseResolver',
+        'StateRouter.staterouter.SequentialPromiseResolver',
         'StateRouter.staterouter.State',
         'StateRouter.staterouter.transitions.FadeTransition',
         'StateRouter.staterouter.transitions.BaseViewTransition'
@@ -252,11 +252,13 @@ Ext.define('StateRouter.staterouter.Router', {
             }
         }
 
-        RSVP.all(resolveBeforeTransition).then(function () {
+        RSVP.all(resolveBeforeTransition).then(function (results) {
 
             // This has to be wrapped in a promise, otherwise
             // exceptions are being eaten by RSVP
             return new RSVP.Promise(function (resolve) {
+
+                me.saveResolveResults(toState, results[0]);
 
                 if (me.currentState !== null) {
                     // No one canceled state transition, proceed to exit controllers we're not keeping
@@ -387,6 +389,57 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     /**
+     * Given an input in the format:
+     *
+     * {
+     *    stateName: {
+     *       resolveA: 'Hello',
+     *       resolveB: 'World',
+     *    },
+     *    anotherStateName: {
+     *       resolveA: 'ExtJS',
+     *       anyNameIsOK: 'Sencha',
+     *    }
+     * }
+     *
+     * It will store the results both in the node and in the controller
+     * "resolved" and "allResolved" properties.
+     *
+     * @param results
+     */
+    saveResolveResults: function (toState, results) {
+        var toPath = toState.getPath(),
+            pathNode,
+            stateDefinition,
+            stateName,
+            allResultsUpToThisNode = {},
+            nodeResults,
+            controller,
+            i;
+
+        for (i = 0; i < toPath.length; i++) {
+            pathNode = toPath[i];
+            stateDefinition = pathNode.getDefinition(),
+            stateName = stateDefinition.getName();
+            nodeResults = Ext.apply({}, results[stateName]);
+            allResultsUpToThisNode = Ext.apply(allResultsUpToThisNode, nodeResults);
+
+            pathNode.resolved = nodeResults;
+            // make a copy otherwise this object will include all results
+            pathNode.allResolved = Ext.apply({}, allResultsUpToThisNode);
+
+            if (stateDefinition.getController()) {
+                controller = this.getController(stateDefinition.getController());
+
+                if (controller) {
+                    controller.resolved = pathNode.resolved;
+                    controller.allResolved = pathNode.allResolved;
+                }
+            }
+        }
+    },
+
+    /**
      * In some cases, usually when a state acts as a grandparent for many child states,
      * the state itself has no view besides a navigation for child states.
      *
@@ -407,20 +460,63 @@ Ext.define('StateRouter.staterouter.Router', {
      */
     resolveAllAndForwardIfNecessary: function (toState, keep) {
         var me = this,
-            resolveAllPromise = StateRouter.staterouter.PromiseResolver.resolveControllerResolvables(toState, keep);
+            toPath = toState.getPath(),
+            input = me.createInputForSequentialPromiseResolver(toState.getPath()),
+            previousResults = {},
+            childInput,
+            resolveAllPromise;
+
+        if (keep > 0) {
+            previousResults = toPath[keep - 1].allResolved;
+        }
+
+        resolveAllPromise = StateRouter.staterouter.SequentialPromiseResolver.resolve(input, previousResults);
 
         // If the last node forwards to a child, then we want to figure out
         // which child it's forwarding to, and possibly chain another promise
         // to the resolve chain.
-        if (this.isLastNodeForwarding(toState.getPath())) {
+        if (this.isLastNodeForwarding(toPath)) {
 
-            resolveAllPromise = resolveAllPromise.then(function () {
+            resolveAllPromise = resolveAllPromise.then(function (results) {
                 me.appendForwardedNode(toState);
-                return StateRouter.staterouter.PromiseResolver.resolveControllerResolvables(toState, toState.getPath().length - 1);
+
+                childInput = me.createInputForSequentialPromiseResolver([toPath[toPath.length - 1]]);
+                return StateRouter.staterouter.SequentialPromiseResolver.resolve(childInput, results);
             });
         }
 
         return resolveAllPromise;
+    },
+
+    createInputForSequentialPromiseResolver: function (pathNodeArr) {
+        var nodeObjsArr = [],
+            pathNode,
+            i,
+            stateDefinition,
+            controllerName,
+            controller,
+            nodeObj;
+
+        for (i = 0; i < pathNodeArr.length; i++) {
+            pathNode = pathNodeArr[i];
+            stateDefinition = pathNode.getDefinition();
+            controllerName = stateDefinition.getController();
+            nodeObj = {
+                pathNode: pathNode
+            };
+
+            if (controllerName) {
+                controller = this.getController(controllerName);
+
+                if (controller && controller.resolve) {
+                    nodeObj.resolve = controller.resolve;
+                }
+            }
+
+            nodeObjsArr.push(nodeObj);
+        }
+
+        return nodeObjsArr;
     },
 
     isLastNodeForwarding: function (toPath) {

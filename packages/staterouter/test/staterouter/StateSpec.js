@@ -1,5 +1,4 @@
 describe("State", function() {
-    var a;
 
     it("should be equal to other state if entire path is equal", function() {
         var mainDef,

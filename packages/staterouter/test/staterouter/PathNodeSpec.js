@@ -1,5 +1,4 @@
 describe("PathNode", function() {
-    var a;
 
     it("should be equal to other path nodes if same parameter and definition name", function() {
 
@@ -8,7 +7,6 @@ describe("PathNode", function() {
             name: 'contacts'
         });
 
-//        var node = Ext.create('StateRouter.staterouter.PathNode');
         var pathNode = Ext.create('StateRouter.staterouter.PathNode', {
             ownParams: {
                 id: 1,
