@@ -16,7 +16,8 @@ module.exports = function(config) {
     files: [
       '../../ext/ext-all-debug.js',
       'lib/*.js',
-      'src/staterouter/**/*.js',
+//      'src/staterouter/**/*.js',
+      'build/staterouter-debug.js',
       'test/staterouter/karma-setup.js',
       'test/staterouter/**/*.js'
     ],

@@ -286,6 +286,13 @@ Ext.define('StateRouter.staterouter.Router', {
         });
     },
 
+    getCurrentState: function () {
+        if (this.currentState) {
+            return this.currentState.getDefinitionName();
+        }
+        return null;
+    },
+
     buildToPath: function (newStateName, stateParams) {
         var toPath = [],
             curStateDefinitionName = newStateName,
@@ -422,7 +429,7 @@ Ext.define('StateRouter.staterouter.Router', {
             stateDefinition = pathNode.getDefinition(),
             stateName = stateDefinition.getName();
             nodeResults = Ext.apply({}, results[stateName]);
-            allResultsUpToThisNode = Ext.apply(allResultsUpToThisNode, nodeResults);
+            allResultsUpToThisNode[stateName] = nodeResults;
 
             pathNode.resolved = nodeResults;
             // make a copy otherwise this object will include all results
@@ -668,5 +675,9 @@ Ext.define('StateRouter.staterouter.Router', {
 
     StateRouter.transitionTo = function(newStateName, stateParams, options) {
         return StateRouter.staterouter.Router.go(newStateName, stateParams, options);
+    };
+
+    StateRouter.getCurrentState = function() {
+        return StateRouter.staterouter.Router.getCurrentState();
     };
 });
