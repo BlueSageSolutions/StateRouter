@@ -206,6 +206,11 @@ Ext.define('StateRouter.staterouter.Router', {
         // the previous state so we do not have to stop/start controllers up to that
         // point.
         if (me.currentState !== null) {
+            if (toState.isEqual(this.currentState)) {
+                Ext.log('Asked to go to the same place');
+                return;
+            }
+
             fromPath = me.currentState.getPath();
 
             // From the root until we've reached the end of the currentState or newState path
@@ -222,11 +227,6 @@ Ext.define('StateRouter.staterouter.Router', {
             if (!me.sendStateChangeRequest(keep, fromPath)) {
                 return false;
             }
-        }
-
-        if (keep === toPath[length]) {
-            console.log('Asked to go to the same place');
-            return;
         }
 
         // Resolve all resolvable items in all controllers before entering new state

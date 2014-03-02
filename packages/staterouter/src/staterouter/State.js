@@ -18,6 +18,10 @@ Ext.define('StateRouter.staterouter.State', {
             return false;
         }
 
+        if (this.path.length !== otherState.path.length) {
+            return false;
+        }
+
         for (var i = 0; i < this.path.length; i++) {
             if (!this.path[i].isEqual(otherState.path[i])) {
                 return false;
