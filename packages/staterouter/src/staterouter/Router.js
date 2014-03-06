@@ -611,11 +611,15 @@ Ext.define('StateRouter.staterouter.Router', {
         var me = this,
             stateDefinition = pathNode.getDefinition(),
             ownParams = pathNode.getOwnParams(),
+            allParams = pathNode.getAllParams(),
+            resolved = pathNode.resolved,
+            previouslyResolved = pathNode.allResolved,
             viewClass = stateDefinition.getView(),
             viewComponent,
             nestedComponent,
             parentComponentId,
-            parentComponent;
+            parentComponent,
+            viewConfig = {};
 
         // In some cases, such as a Window or Dialog, we may not specify a view
         // to swap into the parent.  Instead, the dialog can be created in
@@ -625,15 +629,23 @@ Ext.define('StateRouter.staterouter.Router', {
 
             // If the view is actually a function, we need to execute it to determine the actual view class
             if (Ext.isFunction(stateDefinition.getView())) {
-                viewClass = stateDefinition.getView()(ownParams);
+                viewClass = stateDefinition.getView()(ownParams, allParams, resolved, previouslyResolved);
             }
 
             // First, remove all items from the parent component.
             parentComponent = Ext.getCmp(parentComponentId);
             parentComponent.removeAll();
 
+            Ext.apply(viewConfig, {
+                ownParams: ownParams,
+                allParams: allParams,
+                resolved: resolved,
+                allResolved: previouslyResolved
+            });
+
+            Ext.apply(viewConfig, me.transition.getAdditionalViewConfigOptions(pathNode, nodeIndex, keep, path));
             // Create the child and insert it into the parent
-            viewComponent = Ext.create(viewClass, me.transition.getAdditionalViewConfigOptions(pathNode, nodeIndex, keep, path));
+            viewComponent = Ext.create(viewClass, viewConfig);
             parentComponent.add(viewComponent);
 
             me.transition.transitionTo(viewComponent, pathNode, nodeIndex, keep, path);

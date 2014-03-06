@@ -360,8 +360,7 @@ describe("Router", function() {
             StateRouter.staterouter.Router.reset();
         });
         it("should set resolved property in controller", function () {
-            var value,
-                controller = {
+            var controller = {
                     resolve: {
                         a: function () {
                             return new RSVP.Promise(function (resolve) { resolve('Hello'); });
@@ -390,8 +389,7 @@ describe("Router", function() {
         });
 
         it("should set resolved property in child controllers", function () {
-            var value,
-                controller1 = {
+            var controller1 = {
                     resolve: {
                         a: function () {
                             return new RSVP.Promise(function (resolve) { resolve('Hello'); });
@@ -424,6 +422,108 @@ describe("Router", function() {
                 expect(controller2.allResolved).not.toBeNull();
                 expect(controller2.allResolved.state1.a).toBe('Hello');
                 expect(controller2.allResolved.state1.b).toBe('World');
+            });
+        });
+
+        it("should set resolved property in views", function () {
+            Ext.define('MainView', {
+                extend: 'Ext.container.Container',
+                alias: 'widget.mainview',
+
+                config: {
+                    ownParams: null,
+                    allParams: null,
+                    resolved: null,
+                    allResolved: null
+                },
+
+                items: [{
+                    xtype: 'container',
+                    routerView: true
+                }]
+            });
+
+            Ext.define('ChildView', {
+                extend: 'Ext.container.Container',
+                alias: 'widget.childview',
+
+                myOwnParams: null,
+                myAllParams: null,
+                myResolved: null,
+                myAllResolved: null,
+
+                constructor: function (options) {
+                    this.myOwnParams = options.ownParams;
+                    this.myAllParams = options.allParams;
+                    this.myResolved = options.resolved;
+                    this.myAllResolved = options.allResolved;
+                    this.callParent(arguments);
+                }
+            });
+            var controller1 = {
+                    resolve: {
+                        a: function () {
+                            return new RSVP.Promise(function (resolve) { resolve('Hello'); });
+                        },
+                        b: function () {
+                            return new RSVP.Promise(function (resolve) { resolve('World'); });
+                        }
+                    }
+                },
+                controller2 = {
+                    resolve: {
+                        a: function () {
+                            return new RSVP.Promise(function (resolve) { resolve('Child'); });
+                        }
+                    }
+                };
+
+
+            var vp = Ext.create('Ext.container.Viewport', {
+                id: 'vp'
+            });
+            StateRouter.configure({
+                controllerProvider: function (name) {
+                    if (name === 'controller1') {
+                        return controller1;
+                    }
+                    if (name === 'controller2') {
+                        return controller2;
+                    }
+                    return null;
+                },
+                root: 'vp'
+            });
+            StateRouter.state('state1', {
+                controller: 'controller1',
+                view: 'MainView'
+            });
+            StateRouter.state('state1.child1', {
+                controller: 'controller2',
+                view: 'ChildView'
+            });
+            StateRouter.go('state1.child1');
+
+            waits(1);
+
+            runs(function () {
+                expect(vp.down('mainview').getResolved()).not.toBeUndefined();
+                expect(vp.down('mainview').getResolved()).not.toBeNull();
+                expect(vp.down('mainview').getResolved().a).toBe('Hello');
+                expect(vp.down('mainview').getResolved().b).toBe('World');
+                expect(vp.down('mainview').getAllResolved()).not.toBeUndefined();
+                expect(vp.down('mainview').getAllResolved()).not.toBeNull();
+                expect(vp.down('mainview').getAllResolved().state1.a).toBe('Hello');
+                expect(vp.down('mainview').getAllResolved().state1.b).toBe('World');
+
+                expect(vp.down('childview').myResolved).not.toBeUndefined();
+                expect(vp.down('childview').myResolved).not.toBeNull();
+                expect(vp.down('childview').myResolved.a).toBe('Child');
+                expect(vp.down('childview').myAllResolved).not.toBeUndefined();
+                expect(vp.down('childview').myAllResolved).not.toBeNull();
+                expect(vp.down('childview').myAllResolved.state1.a).toBe('Hello');
+                expect(vp.down('childview').myAllResolved.state1.b).toBe('World');
+                expect(vp.down('childview').myAllResolved['state1.child1'].a).toBe('Child');
             });
         });
     });
