@@ -526,6 +526,48 @@ describe("Router", function() {
                 expect(vp.down('childview').myAllResolved['state1.child1'].a).toBe('Child');
             });
         });
+
+        it("should pass resolved to forwardToChild method", function () {
+            var controller1 = {
+                    resolve: {
+                        a: function () {
+                            return new RSVP.Promise(function (resolve) { resolve('Hello'); });
+                        },
+                        b: function () {
+                            return new RSVP.Promise(function (resolve) { resolve('World'); });
+                        },
+                        menu: function () {
+                            return new RSVP.Promise(function (resolve) { resolve('state1.child1'); });
+                        }
+                    }
+                },
+                controller2 = {
+                };
+
+            StateRouter.configure({controllerProvider: function (name) {
+                if (name === 'controller1') {
+                    return controller1;
+                }
+                if (name === 'controller2') {
+                    return controller2;
+                }
+                return null;
+            }});
+            StateRouter.state('state1', {
+                controller: 'controller1',
+                forwardToChild: function (ownParams, resolved, allResolved) {
+                    return resolved.menu;
+                }
+            });
+            StateRouter.state('state1.child1', {controller: 'controller2'});
+            StateRouter.go('state1');
+
+            waits(1);
+
+            runs(function () {
+                expect(StateRouter.getCurrentState()).toBe('state1.child1');
+            });
+        });
     });
 
 });

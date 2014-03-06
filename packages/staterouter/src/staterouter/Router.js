@@ -258,6 +258,7 @@ Ext.define('StateRouter.staterouter.Router', {
             // exceptions are being eaten by RSVP
             return new RSVP.Promise(function (resolve) {
 
+                // the results array includes SequentialPromiseResolver results and the transition results
                 me.saveResolveResults(toState, results[0]);
 
                 if (me.currentState !== null) {
@@ -485,6 +486,9 @@ Ext.define('StateRouter.staterouter.Router', {
         if (this.isLastNodeForwarding(toPath)) {
 
             resolveAllPromise = resolveAllPromise.then(function (results) {
+                // A little overhead, we're saving the results twice... once now and once when it returns
+                me.saveResolveResults(toState, results);
+
                 me.appendForwardedNode(toState);
 
                 childInput = me.createInputForSequentialPromiseResolver([toPath[toPath.length - 1]]);
@@ -539,7 +543,7 @@ Ext.define('StateRouter.staterouter.Router', {
             forwardedStateDef;
 
         // TODO: Ensure forwardedStateName is a child of the last node state
-        forwardedStateName = currentLastNodeDef.getForwardToChild()(currentLastNode.getAllParams(), toState.allResolved);
+        forwardedStateName = currentLastNodeDef.getForwardToChild()(currentLastNode.getAllParams(), currentLastNode.resolved, currentLastNode.allResolved);
         forwardedStateDef = this.stateDefinitionMap[forwardedStateName];
 
         if (!forwardedStateDef) {
