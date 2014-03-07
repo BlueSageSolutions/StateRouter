@@ -30,7 +30,7 @@ Ext.define('StateRouter.staterouter.transitions.FadeTransition', {
                         // then show the loading mask.
                         if (resolvePromise._state === this.STATE_PENDING) {
 
-                            mask = new Ext.LoadMask(oldViewComponent, { msg: me.loadMessage });
+                            mask = new Ext.LoadMask({ target: oldViewComponent, msg: me.loadMessage });
 
                             timeout = setTimeout(function () {
                                 if (mask !== null) {
