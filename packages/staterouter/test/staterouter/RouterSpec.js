@@ -513,6 +513,80 @@ describe("Router", function() {
             });
         });
 
+        it("should not resolve resolvables unless path changes", function () {
+            var count = 0,
+                controller2Count = 0,
+                controller1 = {
+                    resolve: {
+                        a: function () {
+                            return new RSVP.Promise(function (resolve) {
+                                count++;
+                                resolve();
+                            });
+                        }
+                    }
+                },
+                controller2 = {
+                    resolve: {
+                        a: function () {
+                            return new RSVP.Promise(function (resolve) {
+                                controller2Count++;
+                                resolve();
+                            });
+                        }
+                    }
+                },
+                controller3 = {
+                    resolve: {
+                        a: function () {
+                            return new RSVP.Promise(function (resolve) {
+                                resolve();
+                            });
+                        }
+                    }
+                };
+
+            StateRouter.configure({controllerProvider: function (name) {
+                if (name === 'controller1') {
+                    return controller1;
+                }
+                if (name === 'controller2') {
+                    return controller2;
+                }
+                if (name === 'controller3') {
+                    return controller3;
+                }
+                return null;
+            }});
+            StateRouter.state('state1', {controller: 'controller1'});
+            StateRouter.state('state1.child1', {controller: 'controller2'});
+            StateRouter.state('state1.child2', {controller: 'controller3'});
+            StateRouter.go('state1');
+
+            waits(1);
+
+            runs(function () {
+                expect(count).toBe(1);
+                StateRouter.go('state1.child1');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(count).toBe(1);
+                expect(controller2Count).toBe(1);
+                StateRouter.go('state1.child2');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(count).toBe(1);
+                expect(controller2Count).toBe(1);
+            });
+        });
+
+
         it("should set resolved property in views", function () {
             Ext.define('MainView', {
                 extend: 'Ext.container.Container',

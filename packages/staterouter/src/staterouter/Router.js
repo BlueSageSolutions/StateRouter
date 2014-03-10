@@ -487,7 +487,8 @@ Ext.define('StateRouter.staterouter.Router', {
     resolveAllAndForwardIfNecessary: function (toState, keep) {
         var me = this,
             toPath = toState.getPath(),
-            input = me.createInputForSequentialPromiseResolver(toState.getPath()),
+            nodesToResolve = toState.getPath().slice(keep),
+            input = me.createInputForSequentialPromiseResolver(nodesToResolve),
             previousResults = {},
             childInput,
             resolveAllPromise;
