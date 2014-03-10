@@ -166,6 +166,28 @@ describe("Router", function() {
                 expect(StateRouter.getCurrentState()).toBe('state1.home');
             });
         });
+
+        it("should allow one state to forward to another state", function () {
+
+            runs(function () {
+                StateRouter.state('state1', {});
+                StateRouter.state('state1.contact', {
+                    forwardToChild: function () {
+                        return 'state1.contact.summary';
+                    }
+                });
+                StateRouter.state('state1.contact.summary', {});
+                StateRouter.state('state2', {});
+                StateRouter.go('state1.contact');
+            });
+
+
+            waits(1);
+
+            runs(function () {
+                expect(StateRouter.getCurrentState()).toBe('state1.contact.summary');
+            });
+        });
     });
 
     describe("Controllers", function() {
@@ -440,6 +462,61 @@ describe("Router", function() {
         });
 
 
+        it("should pass params to forwarded child", function () {
+            var contactIdParam,
+                forwardedContactIdParam,
+                childParam;
+
+            runs(function () {
+                StateRouter.configure({controllerProvider: function (name) {
+                    if (name === 'home') {
+                        return {};
+                    }
+                    if (name === 'home.contact') {
+                        return {
+                            start: function (ownParams) {
+                                contactIdParam = ownParams.contactId;
+                            }
+                        };
+                    }
+                    if (name === 'home.contact.summary') {
+                        return {
+                            start: function (ownParams, allParams) {
+                                forwardedContactIdParam = allParams.contactId;
+                                childParam = ownParams.childParamsTest
+                            }
+                        };
+                    }
+                    return {};
+                }});
+                StateRouter
+                    .state('home', {controller: 'home'})
+                    .state('home.contact', {
+                        controller: 'home.contact',
+                        params: ['contactId'],
+                        forwardToChild: function () {
+                            return 'home.contact.summary';
+                        }
+                    })
+                    .state('home.contact.summary', {
+                        controller: 'home.contact.summary',
+                        params: ['childParamsTest']
+                    });
+
+                StateRouter.go('home.contact', {
+                    contactId: 555,
+                    childParamsTest: 'Normally would not use when forwarding'
+                });
+
+                waits(1);
+
+                runs(function () {
+                    expect(contactIdParam).toBe(555);
+                    expect(forwardedContactIdParam).toBe(555);
+                    expect(childParam).toBe('Normally would not use when forwarding');
+                });
+            });
+        });
     });
 
     describe("Resolve", function() {

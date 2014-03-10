@@ -212,6 +212,7 @@ Ext.define('StateRouter.staterouter.Router', {
         toPath = me.buildToPath(newStateName, allStateParams);
 
         me.inheritParams(toPath, options);
+        me.setAllParamsForPath(toPath);
 
         // Build the toState
         toState = Ext.create('StateRouter.staterouter.State', {
@@ -312,7 +313,7 @@ Ext.define('StateRouter.staterouter.Router', {
         return null;
     },
 
-    buildToPath: function (newStateName, stateParams) {
+    buildToPath: function (newStateName, allParams) {
         var toPath = [],
             curStateDefinitionName = newStateName,
             curStateDef;
@@ -323,8 +324,8 @@ Ext.define('StateRouter.staterouter.Router', {
             // Copy only the parameters defined in the StateDefinition
             var node = Ext.create('StateRouter.staterouter.PathNode', {
                 definition: curStateDef,
-                ownParams: Ext.copyTo({}, stateParams, curStateDef.getParams()),
-                allParams: {}
+                ownParams: Ext.copyTo({}, allParams, curStateDef.getParams()),
+                allParams: {} // this will be corrected in setAllParamsForPath
             });
 
             toPath.push(node);
@@ -343,29 +344,36 @@ Ext.define('StateRouter.staterouter.Router', {
      */
     inheritParams: function (toPath, options) {
         var i,
-            fromPath,
-            allParams = {};
+            fromPath;
 
-        if (this.currentState !== null) {
+        // Inherit any parameters not specified in transitionTo's params config
+        if (options && options.hasOwnProperty("inherit") && options.inherit === true && this.currentState !== null) {
             fromPath = this.currentState.getPath();
 
             // From the root until we've reached the end of the currentState or newState path
             for (i = 0; i < toPath.length && i < fromPath.length; i++) {
 
-                // Inherit any parameters not
-                if (options && options.hasOwnProperty("inherit") && options.inherit === true &&
-                    toPath[i].getDefinition().getName() === fromPath[i].getDefinition().getName()) {
+                // Only inherit if the state name is the same at the same path index
+                // TODO: should this use the keep index or same logic (?)
+                if (toPath[i].getDefinition().getName() === fromPath[i].getDefinition().getName()) {
 
                     // Only inherit them if not already specified
                     Ext.applyIf(toPath[i].ownParams, fromPath[i].ownParams);
                 }
             }
         }
+    },
+
+    setAllParamsForPath: function (toPath) {
+        var i,
+            allParams = {};
 
         // From the root until we've reached the end of the currentState or newState path
         for (i = 0; i < toPath.length; i++) {
-
             allParams = Ext.applyIf(allParams, toPath[i].ownParams);
+
+            // make a copy of the current state of allParams
+            // (otherwise each path node will reference the same object)
             toPath[i].allParams = Ext.apply({}, allParams);
         }
     },
@@ -559,7 +567,9 @@ Ext.define('StateRouter.staterouter.Router', {
             currentLastNode = toPath[toPath.length - 1],
             currentLastNodeDef = currentLastNode.getDefinition(),
             forwardedStateName,
-            forwardedStateDef;
+            forwardedStateDef,
+            ownParams,
+            allParams;
 
         // TODO: Ensure forwardedStateName is a child of the last node state
         forwardedStateName = currentLastNodeDef.getForwardToChild()(currentLastNode.getAllParams(), currentLastNode.resolved, currentLastNode.allResolved);
@@ -570,10 +580,13 @@ Ext.define('StateRouter.staterouter.Router', {
         }
 
         // Copy only the parameters defined in the StateDefinition
+        ownParams = Ext.copyTo({}, toState.getAllParams(), forwardedStateDef.getParams());
+        allParams = Ext.apply({}, currentLastNode.getAllParams());
+
         var node = Ext.create('StateRouter.staterouter.PathNode', {
             definition: forwardedStateDef,
-            ownParams: Ext.copyTo({}, currentLastNode.getAllParams(), forwardedStateDef),
-            allParams: {}
+            ownParams: ownParams,
+            allParams: Ext.applyIf(allParams, ownParams)
         });
 
         toPath.push(node);
