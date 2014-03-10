@@ -19,6 +19,94 @@ describe("Router", function() {
             expect(StateRouter.staterouter.Router.stateDefinitionMap['state2']).not.toBeUndefined();
             expect(StateRouter.staterouter.Router.stateDefinitionMap['state2']).not.toBeNull();
         });
+
+        it("should call controllerProcessor if defined to obtain controller name", function () {
+            var which,
+                desktopController = {
+                    start: function () {
+                        which = 'desktop'
+                    }
+                },
+                mobileController = {
+                    start: function () {
+                        which = 'mobile'
+                    }
+                },
+                controllers = {
+                    MyController: desktopController,
+                    MyControllerMobile: mobileController
+                },
+                mobile = true;
+
+            StateRouter
+                .configure({
+                    controllerProvider: function (name) {
+                        return controllers[name];
+                    },
+                    controllerProcessor: function (name) {
+                        if (mobile) {
+                            return name + 'Mobile';
+                        } else {
+                            return name;
+                        }
+                    }
+                }).state('state1', {
+                    controller: 'MyController'
+                });
+
+
+            StateRouter.go('state1');
+
+            waits(1);
+
+            runs(function () {
+                expect(which).toBe('mobile');
+            });
+        });
+
+        it("should call viewProcessor if defined to obtain view name", function () {
+            Ext.define('ViewProcessorTestView', {
+                extend: 'Ext.container.Container',
+                alias: 'widget.viewprocessortestview',
+
+                which: 'desktop'
+            });
+
+            Ext.define('ViewProcessorTestViewMobile', {
+                extend: 'Ext.container.Container',
+                alias: 'widget.viewprocessortestviewmobile',
+
+                which: 'mobile'
+            });
+
+
+            var mobile = true,
+                vp = Ext.create('Ext.container.Viewport', {
+                id: 'vp'
+            });
+
+            StateRouter
+                .configure({
+                    viewProcessor: function (name) {
+                        if (mobile) {
+                            return name + 'Mobile';
+                        } else {
+                            return name;
+                        }
+                    },
+                    root: 'vp'
+                }).state('state1', {
+                    view: 'ViewProcessorTestView'
+                });
+
+            StateRouter.go('state1');
+
+            waits(1);
+
+            runs(function () {
+                expect(vp.down('container').which).toBe('mobile');
+            });
+        });
     });
 
     describe("Basic State Transitions", function() {

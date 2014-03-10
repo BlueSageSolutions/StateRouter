@@ -14,6 +14,8 @@ Ext.define('StateRouter.staterouter.Router', {
     // Configurable properties
     rootComponentId: null,
     controllerProviderFn: null,
+    controllerProcessorFn: null,
+    viewProcessorFn: null,
     startFnName: 'start',
     stopFnName: 'stop',
     transition: null,
@@ -25,6 +27,8 @@ Ext.define('StateRouter.staterouter.Router', {
         // Reset configurable properties too
         this.rootComponentId = null;
         this.controllerProviderFn = null;
+        this.controllerProcessorFn = null;
+        this.viewProcessorFn = null;
         this.startFnName = 'start';
         this.stopFnName = 'stop';
         this.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
@@ -41,6 +45,14 @@ Ext.define('StateRouter.staterouter.Router', {
                 this.controllerProviderFn = config.controllerProvider;
             }
 
+            if (config.hasOwnProperty('controllerProcessor')) {
+                this.controllerProcessorFn = config.controllerProcessor;
+            }
+
+            if (config.hasOwnProperty('viewProcessor')) {
+                this.viewProcessorFn = config.viewProcessor;
+            }
+
             if (config.hasOwnProperty('start')) {
                 this.startFnName = config.start;
             }
@@ -54,11 +66,17 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     getController: function (name) {
+        var controllerName = name;
+
         if (!this.controllerProviderFn) {
             throw new Error("Cannot resolve controller '" + name + "'. controllerProviderFn undefined");
         }
 
-        return this.controllerProviderFn(name);
+        if (this.controllerProcessorFn) {
+            controllerName = this.controllerProcessorFn(name);
+        }
+
+        return this.controllerProviderFn(controllerName);
     },
 
     state: function (configOrName, optConfig) {
@@ -634,6 +652,10 @@ Ext.define('StateRouter.staterouter.Router', {
             // If the view is actually a function, we need to execute it to determine the actual view class
             if (Ext.isFunction(stateDefinition.getView())) {
                 viewClass = stateDefinition.getView()(ownParams, allParams, resolved, previouslyResolved);
+            }
+
+            if (this.viewProcessorFn) {
+                viewClass = this.viewProcessorFn(viewClass);
             }
 
             // First, remove all items from the parent component.
