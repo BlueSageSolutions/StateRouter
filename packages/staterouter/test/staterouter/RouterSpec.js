@@ -1,23 +1,26 @@
 describe("Router", function() {
 
     describe("Configuration", function() {
+        var router;
 
-        beforeEach(function() {
-           StateRouter.staterouter.Router.reset();
+    	beforeEach(function() {
+            router = Ext.create('StateRouter.staterouter.Router');
         });
+        
+        // TODO: This test relies on internal implementation, refactor
         it("should allow you to specify name as first param or in config", function () {
 
             // TODO: Config is required, is it really required?
-            StateRouter.state('state1', {});
-            expect(StateRouter.staterouter.Router.stateDefinitionMap['state1']).not.toBeUndefined();
-            expect(StateRouter.staterouter.Router.stateDefinitionMap['state1']).not.toBeNull();
+            router.state('state1', {});
+            expect(router.stateDefinitionMap['state1']).not.toBeUndefined();
+            expect(router.stateDefinitionMap['state1']).not.toBeNull();
 
-            StateRouter.state({
+            router.state({
                 name: 'state2'
             });
 
-            expect(StateRouter.staterouter.Router.stateDefinitionMap['state2']).not.toBeUndefined();
-            expect(StateRouter.staterouter.Router.stateDefinitionMap['state2']).not.toBeNull();
+            expect(router.stateDefinitionMap['state2']).not.toBeUndefined();
+            expect(router.stateDefinitionMap['state2']).not.toBeNull();
         });
 
         it("should call controllerProcessor if defined to obtain controller name", function () {
@@ -38,7 +41,7 @@ describe("Router", function() {
                 },
                 mobile = true;
 
-            StateRouter
+            router
                 .configure({
                     controllerProvider: function (name) {
                         return controllers[name];
@@ -55,7 +58,7 @@ describe("Router", function() {
                 });
 
 
-            StateRouter.go('state1');
+            router.go('state1');
 
             waits(1);
 
@@ -85,7 +88,7 @@ describe("Router", function() {
                 id: 'vp'
             });
 
-            StateRouter
+            router
                 .configure({
                     viewProcessor: function (name) {
                         if (mobile) {
@@ -99,7 +102,7 @@ describe("Router", function() {
                     view: 'ViewProcessorTestView'
                 });
 
-            StateRouter.go('state1');
+            router.go('state1');
 
             waits(1);
 
@@ -110,95 +113,96 @@ describe("Router", function() {
     });
 
     describe("Basic State Transitions", function() {
+        var router;
 
         beforeEach(function() {
-            StateRouter.staterouter.Router.reset();
+            router = Ext.create('StateRouter.staterouter.Router');
         });
-        it("should allow you to transition from no state to a top-level state", function () {
 
-            StateRouter.state('state1', {});
-            StateRouter.go('state1');
+        it("should allow you to transition from no state to a top-level state", function () {
+            router.state('state1', {});
+            router.go('state1');
 
             waits(1);
 
             runs(function () {
-                expect(StateRouter.getCurrentState()).toBe('state1');
+                expect(router.getCurrentState()).toBe('state1');
             });
         });
 
         it("should allow you to transition from no state to any state", function () {
-
             runs(function () {
-                StateRouter.state('state1', {});
-                StateRouter.state('state1.home', {});
-                StateRouter.state('state1.home.contact', {});
-                StateRouter.state('state2', {});
-                StateRouter.go('state1.home.contact');
+                router.state('state1', {});
+                router.state('state1.home', {});
+                router.state('state1.home.contact', {});
+                router.state('state2', {});
+                router.go('state1.home.contact');
             });
 
             waits(1);
 
             runs(function () {
-                expect(StateRouter.getCurrentState()).toBe('state1.home.contact');
+                expect(router.getCurrentState()).toBe('state1.home.contact');
             });
         });
 
         it("should allow you to transition any state to another state", function () {
-
             runs(function () {
-                StateRouter.state('state1', {});
-                StateRouter.state('state1.home', {});
-                StateRouter.state('state1.home.contact', {});
-                StateRouter.state('state2', {});
-                StateRouter.go('state1.home.contact');
+                router.state('state1', {});
+                router.state('state1.home', {});
+                router.state('state1.home.contact', {});
+                router.state('state2', {});
+                router.go('state1.home.contact');
             });
 
 
             waits(1);
 
             runs(function () {
-                StateRouter.go('state1.home');
+                router.go('state1.home');
             });
 
             waits(1);
 
             runs(function () {
-                expect(StateRouter.getCurrentState()).toBe('state1.home');
+                expect(router.getCurrentState()).toBe('state1.home');
             });
         });
 
         it("should allow one state to forward to another state", function () {
 
             runs(function () {
-                StateRouter.state('state1', {});
-                StateRouter.state('state1.contact', {
+                router.state('state1', {});
+                router.state('state1.contact', {
                     forwardToChild: function () {
                         return 'state1.contact.summary';
                     }
                 });
-                StateRouter.state('state1.contact.summary', {});
-                StateRouter.state('state2', {});
-                StateRouter.go('state1.contact');
+                router.state('state1.contact.summary', {});
+                router.state('state2', {});
+                router.go('state1.contact');
             });
 
 
             waits(1);
 
             runs(function () {
-                expect(StateRouter.getCurrentState()).toBe('state1.contact.summary');
+                expect(router.getCurrentState()).toBe('state1.contact.summary');
             });
         });
     });
 
     describe("Controllers", function() {
+        var router;
 
         beforeEach(function() {
-            StateRouter.staterouter.Router.reset();
+            router = Ext.create('StateRouter.staterouter.Router');
         });
+
         it("should start a controller when entering a state", function () {
             var value;
 
-            StateRouter.configure({controllerProvider: function () {
+            router.configure({controllerProvider: function () {
                 // always return a single controller
                 return {
                     start: function () {
@@ -206,8 +210,8 @@ describe("Router", function() {
                     }
                 };
             }});
-            StateRouter.state('state1', {controller: 'DoesntMatter'});
-            StateRouter.go('state1');
+            router.state('state1', {controller: 'DoesntMatter'});
+            router.go('state1');
 
             waits(1);
 
@@ -219,7 +223,7 @@ describe("Router", function() {
         it("should stop a controller when entering a state", function () {
             var value;
 
-            StateRouter.configure({controllerProvider: function (name) {
+            router.configure({controllerProvider: function (name) {
                 if (name === 'Old') {
                     return {
                         stop: function () {
@@ -235,14 +239,14 @@ describe("Router", function() {
                 }
                 return null;
             }});
-            StateRouter.state('old', {controller: 'Old'});
-            StateRouter.state('new', {controller: 'New'});
-            StateRouter.go('old');
+            router.state('old', {controller: 'Old'});
+            router.state('new', {controller: 'New'});
+            router.go('old');
 
             waits(1);
 
             runs(function () {
-                StateRouter.go('new');
+                router.go('new');
             });
 
             waits(1);
@@ -256,7 +260,7 @@ describe("Router", function() {
         it("should not restart controllers if transitioning to child", function () {
             var value = 0;
 
-            StateRouter.configure({controllerProvider: function (name) {
+            router.configure({controllerProvider: function (name) {
                 if (name === 'home') {
                     return {
                         start: function () {
@@ -266,14 +270,14 @@ describe("Router", function() {
                 }
                 return {};
             }});
-            StateRouter.state('home', {controller: 'home'});
-            StateRouter.state('home.contacts', {controller: 'New'});
-            StateRouter.go('home');
+            router.state('home', {controller: 'home'});
+            router.state('home.contacts', {controller: 'New'});
+            router.go('home');
 
             waits(1);
 
             runs(function () {
-                StateRouter.go('home.contacts');
+                router.go('home.contacts');
             });
 
             waits(1);
@@ -288,7 +292,7 @@ describe("Router", function() {
                 contactsStart = 0,
                 summaryStart = 0;
 
-            StateRouter.configure({controllerProvider: function (name) {
+            router.configure({controllerProvider: function (name) {
                 if (name === 'home') {
                     return {
                         start: function () {
@@ -312,12 +316,12 @@ describe("Router", function() {
                 }
                 return {};
             }});
-            StateRouter
+            router
                 .state('home', {controller: 'home', params: ['homeId', 'anotherHomeId']})
                 .state('home.contacts', {controller: 'home.contacts', params: ['contactId']})
                 .state('home.contacts.summary', {controller: 'home.contacts.summary', params: ['summaryId']});
 
-            StateRouter.go('home.contacts.summary', {
+            router.go('home.contacts.summary', {
                 homeId: 1,
                 anotherHomeId: 2,
                 contactId: 3,
@@ -336,7 +340,7 @@ describe("Router", function() {
 
             // Going to same state, but summary has diff params
             runs(function () {
-                StateRouter.go('home.contacts.summary', {
+                router.go('home.contacts.summary', {
                     homeId: 1,
                     anotherHomeId: 2,
                     contactId: 3,
@@ -354,7 +358,7 @@ describe("Router", function() {
 
             // Going to same state, but contact and summary has diff params
             runs(function () {
-                StateRouter.go('home.contacts.summary', {
+                router.go('home.contacts.summary', {
                     homeId: 1,
                     anotherHomeId: 2,
                     contactId: 7,
@@ -372,7 +376,7 @@ describe("Router", function() {
 
             // Going to same exact state
             runs(function () {
-                StateRouter.go('home.contacts.summary', {
+                router.go('home.contacts.summary', {
                     homeId: 1,
                     anotherHomeId: 2,
                     contactId: 7,
@@ -390,7 +394,7 @@ describe("Router", function() {
 
             // Going to ancestor
             runs(function () {
-                StateRouter.go('home.contacts', {
+                router.go('home.contacts', {
                     homeId: 1,
                     anotherHomeId: 2,
                     contactId: 7,
@@ -408,7 +412,7 @@ describe("Router", function() {
 
             // Going to previous state
             runs(function () {
-                StateRouter.go('home.contacts.summary', {
+                router.go('home.contacts.summary', {
                     homeId: 1,
                     anotherHomeId: 2,
                     contactId: 7,
@@ -426,7 +430,7 @@ describe("Router", function() {
 
             // Going to same state path but home params differ
             runs(function () {
-                StateRouter.go('home.contacts.summary', {
+                router.go('home.contacts.summary', {
                     homeId: 8,
                     anotherHomeId: 2,
                     contactId: 7,
@@ -444,7 +448,7 @@ describe("Router", function() {
 
             // Going to same state path but contacts params differ
             runs(function () {
-                StateRouter.go('home.contacts.summary', {
+                router.go('home.contacts.summary', {
                     homeId: 8,
                     anotherHomeId: 2,
                     contactId: 9,
@@ -468,7 +472,7 @@ describe("Router", function() {
                 childParam;
 
             runs(function () {
-                StateRouter.configure({controllerProvider: function (name) {
+                router.configure({controllerProvider: function (name) {
                     if (name === 'home') {
                         return {};
                     }
@@ -489,7 +493,7 @@ describe("Router", function() {
                     }
                     return {};
                 }});
-                StateRouter
+                router
                     .state('home', {controller: 'home'})
                     .state('home.contact', {
                         controller: 'home.contact',
@@ -503,7 +507,7 @@ describe("Router", function() {
                         params: ['childParamsTest']
                     });
 
-                StateRouter.go('home.contact', {
+                router.go('home.contact', {
                     contactId: 555,
                     childParamsTest: 'Normally would not use when forwarding'
                 });
@@ -520,10 +524,12 @@ describe("Router", function() {
     });
 
     describe("Resolve", function() {
+        var router;
 
         beforeEach(function() {
-            StateRouter.staterouter.Router.reset();
+            router = Ext.create('StateRouter.staterouter.Router');
         });
+
         it("should set resolved property in controller", function () {
             var controller = {
                     resolve: {
@@ -536,12 +542,12 @@ describe("Router", function() {
                     }
                 };
 
-            StateRouter.configure({controllerProvider: function () {
+            router.configure({controllerProvider: function () {
                 // always return a single controller
                 return controller;
             }});
-            StateRouter.state('state1', {controller: 'DoesntMatter'});
-            StateRouter.go('state1');
+            router.state('state1', {controller: 'DoesntMatter'});
+            router.go('state1');
 
             waits(1);
 
@@ -567,7 +573,7 @@ describe("Router", function() {
                 controller2 = {
                 };
 
-            StateRouter.configure({controllerProvider: function (name) {
+            router.configure({controllerProvider: function (name) {
                 if (name === 'controller1') {
                     return controller1;
                 }
@@ -576,9 +582,9 @@ describe("Router", function() {
                 }
                 return null;
             }});
-            StateRouter.state('state1', {controller: 'controller1'});
-            StateRouter.state('state1.child1', {controller: 'controller2'});
-            StateRouter.go('state1.child1');
+            router.state('state1', {controller: 'controller1'});
+            router.state('state1.child1', {controller: 'controller2'});
+            router.go('state1.child1');
 
             waits(1);
 
@@ -623,7 +629,7 @@ describe("Router", function() {
                     }
                 };
 
-            StateRouter.configure({controllerProvider: function (name) {
+            router.configure({controllerProvider: function (name) {
                 if (name === 'controller1') {
                     return controller1;
                 }
@@ -635,16 +641,16 @@ describe("Router", function() {
                 }
                 return null;
             }});
-            StateRouter.state('state1', {controller: 'controller1'});
-            StateRouter.state('state1.child1', {controller: 'controller2'});
-            StateRouter.state('state1.child2', {controller: 'controller3'});
-            StateRouter.go('state1');
+            router.state('state1', {controller: 'controller1'});
+            router.state('state1.child1', {controller: 'controller2'});
+            router.state('state1.child2', {controller: 'controller3'});
+            router.go('state1');
 
             waits(1);
 
             runs(function () {
                 expect(count).toBe(1);
-                StateRouter.go('state1.child1');
+                router.go('state1.child1');
             });
 
             waits(1);
@@ -652,7 +658,7 @@ describe("Router", function() {
             runs(function () {
                 expect(count).toBe(1);
                 expect(controller2Count).toBe(1);
-                StateRouter.go('state1.child2');
+                router.go('state1.child2');
             });
 
             waits(1);
@@ -721,7 +727,7 @@ describe("Router", function() {
             var vp = Ext.create('Ext.container.Viewport', {
                 id: 'vp'
             });
-            StateRouter.configure({
+            router.configure({
                 controllerProvider: function (name) {
                     if (name === 'controller1') {
                         return controller1;
@@ -733,15 +739,15 @@ describe("Router", function() {
                 },
                 root: 'vp'
             });
-            StateRouter.state('state1', {
+            router.state('state1', {
                 controller: 'controller1',
                 view: 'MainView'
             });
-            StateRouter.state('state1.child1', {
+            router.state('state1.child1', {
                 controller: 'controller2',
                 view: 'ChildView'
             });
-            StateRouter.go('state1.child1');
+            router.go('state1.child1');
 
             waits(1);
 
@@ -783,7 +789,7 @@ describe("Router", function() {
                 controller2 = {
                 };
 
-            StateRouter.configure({controllerProvider: function (name) {
+            router.configure({controllerProvider: function (name) {
                 if (name === 'controller1') {
                     return controller1;
                 }
@@ -792,19 +798,19 @@ describe("Router", function() {
                 }
                 return null;
             }});
-            StateRouter.state('state1', {
+            router.state('state1', {
                 controller: 'controller1',
                 forwardToChild: function (ownParams, resolved, allResolved) {
                     return resolved.menu;
                 }
             });
-            StateRouter.state('state1.child1', {controller: 'controller2'});
-            StateRouter.go('state1');
+            router.state('state1.child1', {controller: 'controller2'});
+            router.go('state1');
 
             waits(1);
 
             runs(function () {
-                expect(StateRouter.getCurrentState()).toBe('state1.child1');
+                expect(router.getCurrentState()).toBe('state1.child1');
             });
         });
     });

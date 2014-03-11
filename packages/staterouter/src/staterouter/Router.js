@@ -6,9 +6,7 @@ Ext.define('StateRouter.staterouter.Router', {
         'StateRouter.staterouter.transitions.BaseViewTransition'
     ],
 
-    singleton: true,
-
-    stateDefinitionMap: {},
+    stateDefinitionMap: null,
     currentState: null,
 
     // Configurable properties
@@ -16,19 +14,12 @@ Ext.define('StateRouter.staterouter.Router', {
     controllerProviderFn: null,
     controllerProcessorFn: null,
     viewProcessorFn: null,
-    startFnName: 'start',
-    stopFnName: 'stop',
+    startFnName: null,
+    stopFnName: null,
     transition: null,
 
-    reset: function () {
+    constructor: function () {
         this.stateDefinitionMap = {};
-        this.currentState = null;
-
-        // Reset configurable properties too
-        this.rootComponentId = null;
-        this.controllerProviderFn = null;
-        this.controllerProcessorFn = null;
-        this.viewProcessorFn = null;
         this.startFnName = 'start';
         this.stopFnName = 'stop';
         this.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
@@ -713,23 +704,26 @@ Ext.define('StateRouter.staterouter.Router', {
     }
 },
     function () {
+
+    StateRouter.Router = new this();
+
     StateRouter.configure = function(config) {
-        return StateRouter.staterouter.Router.configure(config);
+        return StateRouter.Router.configure(config);
     };
 
     StateRouter.state = function(configOrName, optConfig) {
-        return StateRouter.staterouter.Router.state(configOrName, optConfig);
+        return StateRouter.Router.state(configOrName, optConfig);
     };
 
     StateRouter.go = function(newStateName, stateParams, options) {
-        return StateRouter.staterouter.Router.go(newStateName, stateParams, options);
+        return StateRouter.Router.go(newStateName, stateParams, options);
     };
 
     StateRouter.transitionTo = function(newStateName, stateParams, options) {
-        return StateRouter.staterouter.Router.go(newStateName, stateParams, options);
+        return StateRouter.Router.go(newStateName, stateParams, options);
     };
 
     StateRouter.getCurrentState = function() {
-        return StateRouter.staterouter.Router.getCurrentState();
+        return StateRouter.Router.getCurrentState();
     };
 });
