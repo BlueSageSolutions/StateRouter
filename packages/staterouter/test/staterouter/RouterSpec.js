@@ -1,5 +1,40 @@
 describe("Router", function() {
 
+    describe("Utility Methods", function () {
+
+        it("isChild", function () {
+            expect(StateRouter.isChild('home', 'home.contact')).toBe(true);
+            expect(StateRouter.isChild('home', 'home')).toBe(false);
+            expect(StateRouter.isChild('home', 'home.contact.a')).toBe(true);
+            expect(StateRouter.isChild('blah', 'home.contact.a')).toBe(false);
+            expect(StateRouter.isChild('home.contact', 'home')).toBe(false);
+        });
+
+        it("isOrHasChild", function () {
+            expect(StateRouter.isOrHasChild('home', 'home.contact')).toBe(true);
+            expect(StateRouter.isOrHasChild('home', 'home')).toBe(true);
+            expect(StateRouter.isOrHasChild('home', 'home.contact.a')).toBe(true);
+            expect(StateRouter.isOrHasChild('blah', 'home.contact.a')).toBe(false);
+            expect(StateRouter.isOrHasChild('home.contact', 'home')).toBe(false);
+        });
+
+        it("isOrHasParent", function () {
+            expect(StateRouter.isOrHasParent('home.contact', 'home')).toBe(true);
+            expect(StateRouter.isOrHasParent('home', 'home')).toBe(true);
+            expect(StateRouter.isOrHasParent('home.contact.a', 'home')).toBe(true);
+            expect(StateRouter.isOrHasParent('home.contact.a', 'blah')).toBe(false);
+            expect(StateRouter.isOrHasParent('home', 'home.contact')).toBe(false);
+        });
+
+        it("isParent", function () {
+            expect(StateRouter.isParent('home.contact', 'home')).toBe(true);
+            expect(StateRouter.isParent('home', 'home')).toBe(false);
+            expect(StateRouter.isParent('home.contact.a', 'home')).toBe(true);
+            expect(StateRouter.isParent('home.contact.a', 'blah')).toBe(false);
+            expect(StateRouter.isParent('home', 'home.contact')).toBe(false);
+        });
+    });
+
     describe("Configuration", function() {
         var router;
 
@@ -143,6 +178,182 @@ describe("Router", function() {
 
             runs(function () {
                 expect(router.getCurrentState()).toBe('state1.home.contact');
+            });
+        });
+
+        it("should allow controllers to cancel a transition", function () {
+            var c1 = {
+
+                },
+                c2 = {
+                    onStateRouterEvent: function (eventName, eventObj) {
+                        if (eventName === 'stateChangeRequest') {
+                            return false;
+                        }
+                    }
+                };
+
+
+            runs(function () {
+                router.configure({
+                    controllerProvider: function (name) {
+                        if (name === 'c1') {
+                            return c1;
+                        }
+                        if (name === 'c2') {
+                            return c2;
+                        }
+                        return null;
+                    }
+                });
+                router.state('state1', { controller: 'c1'});
+                router.state('state1.home', { controller: 'c2'});
+                router.go('state1.home');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('state1.home');
+                router.go('state1');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('state1.home');
+            });
+        });
+
+        it("should allow errorHandler to handle transition errors", function () {
+            var c1 = {
+              start: function () {
+                  var a = 1 + blah;
+                  console.log('this will not be printed');
+              }
+            };
+            var errorObj;
+
+            router.configure({
+                controllerProvider: function (name) {
+                    return c1;
+                },
+                errorHandler: function (error) {
+                    errorObj = error;
+                }
+            });
+            router.state('state1', {
+                controller: 'c1'
+            });
+            router.go('state1');
+
+            waits(1);
+
+            runs(function () {
+                expect(errorObj).not.toBeUndefined();
+                expect(errorObj).not.toBeNull();
+            });
+
+        });
+        it("should fail state transitions if error during startup", function () {
+            var errorObj,
+                c2 = {
+                    start: function () {
+                        var a = 1 + blah;
+                        console.log('this will not be printed');
+                    }
+                },
+                c1 = {
+                    onStateRouterEvent: function (eventName, eventObj) {
+                        if (eventName === StateRouter.STATE_CHANGE_FAILED) {
+                            errorObj = eventObj;
+                        }
+                    }
+                };
+
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === 'c1') {
+                        return c1;
+                    } else if (name === 'c2') {
+                        return c2;
+                    }
+                }
+            });
+            router.state('state1', {
+                controller: 'c1'
+            });
+            router.state('state2', {
+                controller: 'c2'
+            });
+            router.go('state1');
+
+            waits(1);
+
+            runs(function () {
+                router.go('state2');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('state1');
+                expect(errorObj).not.toBeUndefined();
+                expect(errorObj.fromState).toBe('state1');
+                expect(errorObj.toState).toBe('state2');
+            });
+        });
+
+        it("should fail state transitions if error during resolve", function () {
+            var errorObj,
+                c2 = {
+                    resolve: {
+                        hello: function () {
+                            return new RSVP.Promise(function (resolve, reject) {
+                                var a = 1 + blah;
+                                console.log('this will not be printed');
+                            });
+                        }
+                    }
+                },
+                c1 = {
+                    onStateRouterEvent: function (eventName, eventObj) {
+                        if (eventName === StateRouter.STATE_CHANGE_FAILED) {
+                            errorObj = eventObj;
+                        }
+                    }
+                };
+
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === 'c1') {
+                        return c1;
+                    } else if (name === 'c2') {
+                        return c2;
+                    }
+                }
+            });
+            router.state('state1', {
+                controller: 'c1'
+            });
+            router.state('state2', {
+                controller: 'c2'
+            });
+            router.go('state1');
+
+            waits(1);
+
+            runs(function () {
+                router.go('state2');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('state1');
+                expect(errorObj).not.toBeUndefined();
+                expect(errorObj.fromState).toBe('state1');
+                expect(errorObj.toState).toBe('state2');
             });
         });
 
