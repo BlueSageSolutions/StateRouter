@@ -7,7 +7,6 @@ Ext.define('StateRouter.staterouter.SequentialPromiseResolver', {
 
     handleResults: function (results, allResults) {
         var me = this,
-            stateDefinition,
             stateName;
 
         // STATE_NAME_KEY's value if the name of the state
@@ -46,10 +45,9 @@ Ext.define('StateRouter.staterouter.SequentialPromiseResolver', {
                         throw new Error('Illegal resolve identifier "' + me.STATE_NAME_KEY + '". This identifier is reserved.');
                     }
 
-                    // Call the function to return the promise and add
-                    // it to the array. This starts the loading process.
+                    // Create a promise which calls the resolve function
                     resolvePromiseFn = stateObj.resolve[resolveKey];
-                    promises[resolveKey] = resolvePromiseFn(pathNode.getOwnParams(), pathNode.getAllParams(), allResults);
+                    promises[resolveKey] = me.createPromise(resolvePromiseFn, pathNode.getOwnParams(), pathNode.getAllParams(), allResults);
                 }
             }
 
@@ -57,6 +55,12 @@ Ext.define('StateRouter.staterouter.SequentialPromiseResolver', {
         });
 
         return newPromise;
+    },
+
+    createPromise: function (resolveFn, ownParams, allParams, allResults) {
+        return new RSVP.Promise(function (resolve, reject) {
+            resolveFn(resolve, reject, ownParams, allParams, allResults);
+        });
     },
 
     /**
@@ -87,7 +91,7 @@ Ext.define('StateRouter.staterouter.SequentialPromiseResolver', {
      *
      *
      * @param nodeObjsArr the array of promises to resolved in the format defined above
-     * @param previousResults   input to be passed to the promises
+     * @param [previousResults]   input to be passed to the promises
      * @returns the chained promise
      */
     resolve: function (nodeObjsArr, previousResults) {

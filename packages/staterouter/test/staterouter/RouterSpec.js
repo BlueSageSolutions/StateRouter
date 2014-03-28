@@ -38,7 +38,7 @@ describe("Router", function() {
     describe("Configuration", function() {
         var router;
 
-    	beforeEach(function() {
+        beforeEach(function() {
             router = Ext.create('StateRouter.staterouter.Router');
         });
         
@@ -47,27 +47,27 @@ describe("Router", function() {
 
             // TODO: Config is required, is it really required?
             router.state('state1', {});
-            expect(router.stateDefinitionMap['state1']).not.toBeUndefined();
-            expect(router.stateDefinitionMap['state1']).not.toBeNull();
+            expect(router.stateDefinitionMap.state1).not.toBeUndefined();
+            expect(router.stateDefinitionMap.state1).not.toBeNull();
 
             router.state({
                 name: 'state2'
             });
 
-            expect(router.stateDefinitionMap['state2']).not.toBeUndefined();
-            expect(router.stateDefinitionMap['state2']).not.toBeNull();
+            expect(router.stateDefinitionMap.state2).not.toBeUndefined();
+            expect(router.stateDefinitionMap.state2).not.toBeNull();
         });
 
         it("should call controllerProcessor if defined to obtain controller name", function () {
             var which,
                 desktopController = {
                     start: function () {
-                        which = 'desktop'
+                        which = 'desktop';
                     }
                 },
                 mobileController = {
                     start: function () {
-                        which = 'mobile'
+                        which = 'mobile';
                     }
                 },
                 controllers = {
@@ -186,7 +186,7 @@ describe("Router", function() {
 
                 },
                 c2 = {
-                    onStateRouterEvent: function (eventName, eventObj) {
+                    onStateRouterEvent: function (eventName) {
                         if (eventName === 'stateChangeRequest') {
                             return false;
                         }
@@ -308,11 +308,9 @@ describe("Router", function() {
             var errorObj,
                 c2 = {
                     resolve: {
-                        hello: function () {
-                            return new RSVP.Promise(function (resolve, reject) {
-                                var a = 1 + blah;
-                                console.log('this will not be printed');
-                            });
+                        hello: function (resolve, reject) {
+                            var a = 1 + blah;
+                            console.log('this will not be printed');
                         }
                     }
                 },
@@ -698,7 +696,7 @@ describe("Router", function() {
                         return {
                             start: function (ownParams, allParams) {
                                 forwardedContactIdParam = allParams.contactId;
-                                childParam = ownParams.childParamsTest
+                                childParam = ownParams.childParamsTest;
                             }
                         };
                     }
@@ -744,11 +742,11 @@ describe("Router", function() {
         it("should set resolved property in controller", function () {
             var controller = {
                     resolve: {
-                        a: function () {
-                            return new RSVP.Promise(function (resolve) { resolve('Hello'); });
+                        a: function (resolve) {
+                            resolve('Hello');
                         },
-                        b: function () {
-                            return new RSVP.Promise(function (resolve) { resolve('World'); });
+                        b: function (resolve) {
+                            resolve('World');
                         }
                     }
                 };
@@ -773,11 +771,11 @@ describe("Router", function() {
         it("should set resolved property in child controllers", function () {
             var controller1 = {
                     resolve: {
-                        a: function () {
-                            return new RSVP.Promise(function (resolve) { resolve('Hello'); });
+                        a: function (resolve) {
+                            resolve('Hello');
                         },
-                        b: function () {
-                            return new RSVP.Promise(function (resolve) { resolve('World'); });
+                        b: function (resolve) {
+                            resolve('World');
                         }
                     }
                 },
@@ -812,30 +810,24 @@ describe("Router", function() {
                 controller2Count = 0,
                 controller1 = {
                     resolve: {
-                        a: function () {
-                            return new RSVP.Promise(function (resolve) {
-                                count++;
-                                resolve();
-                            });
+                        a: function (resolve) {
+                            count++;
+                            resolve();
                         }
                     }
                 },
                 controller2 = {
                     resolve: {
-                        a: function () {
-                            return new RSVP.Promise(function (resolve) {
-                                controller2Count++;
-                                resolve();
-                            });
+                        a: function (resolve) {
+                            controller2Count++;
+                            resolve();
                         }
                     }
                 },
                 controller3 = {
                     resolve: {
-                        a: function () {
-                            return new RSVP.Promise(function (resolve) {
-                                resolve();
-                            });
+                        a: function (resolve) {
+                            resolve();
                         }
                     }
                 };
@@ -918,18 +910,18 @@ describe("Router", function() {
             });
             var controller1 = {
                     resolve: {
-                        a: function () {
-                            return new RSVP.Promise(function (resolve) { resolve('Hello'); });
+                        a: function (resolve) {
+                            resolve('Hello');
                         },
-                        b: function () {
-                            return new RSVP.Promise(function (resolve) { resolve('World'); });
+                        b: function (resolve) {
+                            resolve('World');
                         }
                     }
                 },
                 controller2 = {
                     resolve: {
-                        a: function () {
-                            return new RSVP.Promise(function (resolve) { resolve('Child'); });
+                        a: function (resolve) {
+                            resolve('Child');
                         }
                     }
                 };
@@ -986,14 +978,14 @@ describe("Router", function() {
         it("should pass resolved to forwardToChild method", function () {
             var controller1 = {
                     resolve: {
-                        a: function () {
-                            return new RSVP.Promise(function (resolve) { resolve('Hello'); });
+                        a: function (resolve) {
+                            resolve('Hello');
                         },
-                        b: function () {
-                            return new RSVP.Promise(function (resolve) { resolve('World'); });
+                        b: function (resolve) {
+                            resolve('World');
                         },
-                        menu: function () {
-                            return new RSVP.Promise(function (resolve) { resolve('state1.child1'); });
+                        menu: function (resolve) {
+                            resolve('state1.child1');
                         }
                     }
                 },
@@ -1011,7 +1003,7 @@ describe("Router", function() {
             }});
             router.state('state1', {
                 controller: 'controller1',
-                forwardToChild: function (ownParams, resolved, allResolved) {
+                forwardToChild: function (ownParams, resolved) {
                     return resolved.menu;
                 }
             });

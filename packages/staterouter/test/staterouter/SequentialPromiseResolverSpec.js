@@ -73,34 +73,26 @@ describe("SequentialPromiseResolver", function() {
         promiseArr = [{
             pathNode: mainPathNode,
             resolve: {
-                a: function () {
-                    return new RSVP.Promise(function (resolve, reject) {
-                        resolve("Hello ");
-                    });
+                a: function (resolve) {
+                    resolve("Hello ");
                 },
-                b: function () {
-                    return new RSVP.Promise(function (resolve, reject) {
-                        resolve("StateRouter ");
-                    });
+                b: function (resolve) {
+                    resolve("StateRouter ");
                 }
             }
         }, {
             pathNode: mainContactPathNode,
             resolve: {
                 // can have same resolve name as another node
-                a: function (ownParams, allParams, previouslyResolved) {
-                    return new RSVP.Promise(function (resolve, reject) {
-                        resolve(previouslyResolved.main.a + previouslyResolved.main.b + 'World');
-                    });
+                a: function (resolve, reject, ownParams, allParams, previouslyResolved) {
+                    resolve(previouslyResolved.main.a + previouslyResolved.main.b + 'World');
                 }
             }
         }, {
             pathNode: mainContactAddressPathNode,
             resolve: {
-                last: function (ownParams, allParams, previouslyResolved) {
-                    return new RSVP.Promise(function (resolve, reject) {
-                        resolve(previouslyResolved['main.contact'].a + '!!');
-                    });
+                last: function (resolve, reject, ownParams, allParams, previouslyResolved) {
+                    resolve(previouslyResolved['main.contact'].a + '!!');
                 }
             }
         }];
@@ -121,11 +113,6 @@ describe("SequentialPromiseResolver", function() {
             mainContactPathNode,
             promiseArr1,
             promiseArr2,
-            previousResults = {
-                login: {
-                    username: 'bob'
-                }
-            },
             theResults;
 
         mainPathNode = Ext.create('StateRouter.staterouter.PathNode', {
@@ -143,10 +130,8 @@ describe("SequentialPromiseResolver", function() {
         promiseArr1 = [{
             pathNode: mainPathNode,
             resolve: {
-                a: function () {
-                    return new RSVP.Promise(function (resolve, reject) {
-                        resolve("Hello");
-                    });
+                a: function (resolve) {
+                    resolve("Hello");
                 }
             }
         }];
@@ -155,10 +140,8 @@ describe("SequentialPromiseResolver", function() {
         promiseArr2 = [{
             pathNode: mainContactPathNode,
             resolve: {
-                b: function (ownParams, allParams, previouslyResolved) {
-                    return new RSVP.Promise(function (resolve, reject) {
-                        resolve(previouslyResolved.main.a + " World");
-                    });
+                b: function (resolve, reject, ownParams, allParams, previouslyResolved) {
+                    resolve(previouslyResolved.main.a + " World");
                 }
             }
         }];
@@ -217,29 +200,25 @@ describe("SequentialPromiseResolver", function() {
         promiseArr = [{
             pathNode: mainPathNode,
             resolve: {
-                a: function (ownParams, allParams) {
-                    return new RSVP.Promise(function (resolve, reject) {
-                        expect(ownParams.user).toEqual('bob');
-                        expect(allParams.user).toEqual('bob');
-                        resolve();
-                    });
+                a: function (resolve, reject, ownParams, allParams) {
+                    expect(ownParams.user).toEqual('bob');
+                    expect(allParams.user).toEqual('bob');
+                    resolve();
                 }
             }
         }, {
             pathNode: mainContactPathNode,
             resolve: {
                 // can have same resolve name as another node
-                a: function (ownParams, allParams) {
-                    return new RSVP.Promise(function (resolve, reject) {
-                        expect(ownParams.user).toBeUndefined('bob');
-                        expect(ownParams.id).toEqual('1');
-                        expect(ownParams.contactId).toEqual('2');
-                        expect(allParams.user).toEqual('bob');
-                        expect(allParams.id).toEqual('1');
-                        expect(allParams.contactId).toEqual('2');
+                a: function (resolve, reject, ownParams, allParams) {
+                    expect(ownParams.user).toBeUndefined('bob');
+                    expect(ownParams.id).toEqual('1');
+                    expect(ownParams.contactId).toEqual('2');
+                    expect(allParams.user).toEqual('bob');
+                    expect(allParams.id).toEqual('1');
+                    expect(allParams.contactId).toEqual('2');
 
-                        resolve();
-                    });
+                    resolve();
                 }
             }
         }];
