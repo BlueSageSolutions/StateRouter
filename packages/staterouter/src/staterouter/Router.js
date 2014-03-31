@@ -82,68 +82,39 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     state: function (configOrName, optConfig) {
-        var newStateConfig = {},
+        var newStateConfig = optConfig || {},
             newStateDefinition,
+            parentStateName,
             lastPeriodIndex;
 
-        if (!configOrName) {
-            throw "StateRouter.state called with no config";
-//            throw new Error("StateRouter.state called with no config");
-        }
-
-        // If the first argument is a String, it is the state name
-        if (Ext.isString(configOrName)) {
-
-            if (optConfig && Ext.isObject(optConfig)) {
-                Ext.apply(optConfig, {
-                    name: configOrName
-                });
-                Ext.apply(newStateConfig, optConfig);
-            } else {
-                throw "Config for state: '" + configOrName + "' required";
-            }
-        } else if (Ext.isObject(configOrName)) {
-            Ext.apply(newStateConfig, configOrName);
+        if (Ext.isObject(configOrName)) {
+            newStateConfig = configOrName;
+        } else if (Ext.isString(configOrName)) {
+            newStateConfig.name = configOrName;
         }
 
         // Now build the state
-        if (!newStateConfig.hasOwnProperty('name')) {
+        newStateDefinition = Ext.create('StateRouter.staterouter.StateDefinition', newStateConfig);
+
+        if (!newStateDefinition.getName()) {
             throw "State requires 'name'";
         }
 
-        newStateDefinition = Ext.create('StateRouter.staterouter.StateDefinition', {
-            name: newStateConfig.name
-        });
-
+        // Determine if this is a child state and if so verify and set the parent
         lastPeriodIndex = newStateDefinition.getName().lastIndexOf('.');
 
         // Extract the parent from the name
         if (lastPeriodIndex === -1) {
-            newStateDefinition.setParentName(null);
+            newStateDefinition.setParent(null);
         } else {
-            newStateDefinition.setParentName(newStateDefinition.getName().slice(0, lastPeriodIndex));
+            parentStateName = newStateDefinition.getName().slice(0, lastPeriodIndex);
+
+            if (!this.stateDefinitionMap.hasOwnProperty(parentStateName)) {
+                throw "Parent '" + parentStateName + "' not found";
+            }
+
+            newStateDefinition.setParent(this.stateDefinitionMap[parentStateName]);
         }
-
-        // Set other properties
-        if (newStateConfig.hasOwnProperty('view')) {
-            // Might be a view or a function which returns a view
-            newStateDefinition.setView(newStateConfig.view);
-        }
-
-        if (newStateConfig.hasOwnProperty('controller')) {
-            newStateDefinition.setController(newStateConfig.controller);
-        }
-
-        if (newStateConfig.hasOwnProperty('params')) {
-            newStateDefinition.setParams(newStateConfig.params);
-        }
-
-        if (newStateConfig.hasOwnProperty('forwardToChild')) {
-            newStateDefinition.setForwardToChild(newStateConfig.forwardToChild);
-        }
-
-        // If URL is specified, the URL parameters will override the 'params' property
-
 
         this.stateDefinitionMap[newStateDefinition.getName()] = newStateDefinition;
 
@@ -328,12 +299,9 @@ Ext.define('StateRouter.staterouter.Router', {
 
     buildToPath: function (newStateName, allParams) {
         var toPath = [],
-            curStateDefinitionName = newStateName,
-            curStateDef;
+            curStateDef = this.stateDefinitionMap[newStateName];
 
         do {
-            curStateDef = this.stateDefinitionMap[curStateDefinitionName];
-
             // Copy only the parameters defined in the StateDefinition
             var node = Ext.create('StateRouter.staterouter.PathNode', {
                 definition: curStateDef,
@@ -342,7 +310,7 @@ Ext.define('StateRouter.staterouter.Router', {
             });
 
             toPath.push(node);
-        } while ((curStateDefinitionName = curStateDef.getParentName()) !== null);
+        } while ((curStateDef = curStateDef.getParent()) !== null);
 
         // We want the array to be ordered from root to current state
         toPath.reverse();
@@ -661,7 +629,7 @@ Ext.define('StateRouter.staterouter.Router', {
      * @returns {*}
      */
     getParentComponentId: function (stateDefinition) {
-        if (stateDefinition.getParentName()) {
+        if (stateDefinition.getParent()) {
             // We need the Component.id of the parent but we only have the
             // class name defined in the parent's state definition.
             //
@@ -672,7 +640,7 @@ Ext.define('StateRouter.staterouter.Router', {
             // StateDefinition when this parent was originally created.
             //
             // See the code that follows.
-            return this.stateDefinitionMap[stateDefinition.getParentName()].nestedViewComponentId;
+            return stateDefinition.getParent().nestedViewComponentId;
         } else {
             // If no parent, we use the root
             return this.rootComponentId;

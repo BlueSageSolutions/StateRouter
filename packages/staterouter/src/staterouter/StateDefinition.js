@@ -2,7 +2,7 @@ Ext.define('StateRouter.staterouter.StateDefinition', {
 
     config: {
         name: null,
-        parentName: null,
+        parent: null,
         view: null,
         controller: null,
         forwardToChild: null,
