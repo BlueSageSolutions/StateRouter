@@ -677,8 +677,7 @@ describe("Router", function() {
 
         it("should pass params to forwarded child", function () {
             var contactIdParam,
-                forwardedContactIdParam,
-                childParam;
+                forwardedContactIdParam;
 
             runs(function () {
                 router.configure({controllerProvider: function (name) {
@@ -696,7 +695,6 @@ describe("Router", function() {
                         return {
                             start: function (ownParams, allParams) {
                                 forwardedContactIdParam = allParams.contactId;
-                                childParam = ownParams.childParamsTest;
                             }
                         };
                     }
@@ -712,13 +710,11 @@ describe("Router", function() {
                         }
                     })
                     .state('home.contact.summary', {
-                        controller: 'home.contact.summary',
-                        params: ['childParamsTest']
+                        controller: 'home.contact.summary'
                     });
 
                 router.go('home.contact', {
-                    contactId: 555,
-                    childParamsTest: 'Normally would not use when forwarding'
+                    contactId: 555
                 });
 
                 waits(1);
@@ -726,7 +722,6 @@ describe("Router", function() {
                 runs(function () {
                     expect(contactIdParam).toBe(555);
                     expect(forwardedContactIdParam).toBe(555);
-                    expect(childParam).toBe('Normally would not use when forwarding');
                 });
             });
         });
@@ -1014,6 +1009,159 @@ describe("Router", function() {
 
             runs(function () {
                 expect(router.getCurrentState()).toBe('state1.child1');
+            });
+        });
+
+        it("should keep resolved when navigating to parent", function () {
+            var controller1 = {
+                    resolve: {
+                        a: function (resolve) {
+                            resolve('Hello');
+                        }
+                    },
+
+                    start: function () {
+                        a = this.resolved.a;
+                    }
+                },
+                controller2 = {
+                },
+                a;
+
+            router.configure({controllerProvider: function (name) {
+                if (name === 'controller1') {
+                    return controller1;
+                }
+                if (name === 'controller2') {
+                    return controller2;
+                }
+                return null;
+            }});
+            router.state('state1', { controller: 'controller1' });
+            router.state('state1.child1', {controller: 'controller2'});
+            router.go('state1.child1');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('state1.child1');
+                expect(router.getCurrentState()).toBe('state1.child1');
+            });
+        });
+    });
+
+    describe("History tests", function () {
+
+        var router;
+
+        beforeEach(function() {
+            router = Ext.create('StateRouter.staterouter.Router');
+        });
+
+        it("should transition to simple state on token change", function () {
+            router.state('home', {
+                url: '/home'
+            });
+
+            router.onHistoryChanged('/home');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home');
+            });
+        });
+
+        it("should transition to child state on token change", function () {
+            router.state('home', {
+                url: '/home'
+            });
+            router.state('home.contact', {
+                url: '/contact'
+            });
+
+            router.onHistoryChanged('/home/contact');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home.contact');
+            });
+        });
+
+        it("should transition to child state and set param on token change with param", function () {
+            router.state('home', {
+                url: '/home'
+            });
+            router.state('home.contact', {
+                url: '/contact/:id'
+            });
+
+            router.onHistoryChanged('/home/contact/355');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home.contact');
+                expect(router.getCurrentStateParams().id).toBe('355');
+            });
+        });
+
+        it("should transition to child state and set multiple params", function () {
+            router.state('home', {
+                url: '/home'
+            });
+            router.state('home.contact', {
+                url: '/contact/:id/:name'
+            });
+
+            router.onHistoryChanged('/home/contact/355/Jones');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home.contact');
+                expect(router.getCurrentStateParams().id).toBe('355');
+                expect(router.getCurrentStateParams().name).toBe('Jones');
+            });
+        });
+
+        it("should transition to child state and set all params", function () {
+            router.state('home', {
+                url: '/home'
+            });
+            router.state('home.contact', {
+                url: '/contact/:id/:name'
+            });
+            router.state('home.contact.address', {
+                url: '/address/edit/:addressId'
+            });
+
+            router.onHistoryChanged('/home/contact/355/Jones/address/edit/10');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home.contact.address');
+                expect(router.getCurrentStateParams().id).toBe('355');
+                expect(router.getCurrentStateParams().name).toBe('Jones');
+                expect(router.getCurrentStateParams().addressId).toBe('10');
+            });
+        });
+
+        it("should transition to child state even if parent has no url", function () {
+            router.state('home', {
+            });
+            router.state('home.contact', {
+                url: '/contact'
+            });
+
+            router.onHistoryChanged('/contact');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home.contact');
             });
         });
     });

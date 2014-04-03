@@ -97,7 +97,7 @@ Ext.define('StateRouter.staterouter.SequentialPromiseResolver', {
     resolve: function (nodeObjsArr, previousResults) {
         var me = this,
             allResults = previousResults || {},
-            r = new RSVP.Promise(function (resolve) { resolve({}); }),
+            r = new RSVP.Promise(function (resolve) { resolve(allResults); }),
             i;
 
         for (i = 0; i < nodeObjsArr.length; i++) {

@@ -1,9 +1,11 @@
 Ext.define('StateRouter.staterouter.Router', {
     requires: [
+        'Ext.util.History',
         'StateRouter.staterouter.SequentialPromiseResolver',
         'StateRouter.staterouter.State',
         'StateRouter.staterouter.transitions.FadeTransition',
-        'StateRouter.staterouter.transitions.BaseViewTransition'
+        'StateRouter.staterouter.transitions.BaseViewTransition',
+        'StateRouter.staterouter.UrlParser'
     ],
 
     currentState: null,
@@ -23,6 +25,9 @@ Ext.define('StateRouter.staterouter.Router', {
     // Private state variables which change during transition
     keep: null,
     toState: null,
+
+    ready: true,
+    historyInitialized: false,
 
     constructor: function () {
         this.stateDefinitionMap = {};
@@ -67,6 +72,58 @@ Ext.define('StateRouter.staterouter.Router', {
         return this;
     },
 
+    onHistoryChanged: function (token) {
+        var me = this,
+            matches,
+            stateDef,
+            curStateDef,
+            allParams = [],
+            paramsObj = {};
+
+        for (var stateName in me.stateDefinitionMap) {
+            if (me.stateDefinitionMap.hasOwnProperty(stateName)) {
+                stateDef = me.stateDefinitionMap[stateName];
+
+                if (stateDef.getAbsoluteUrlRegex()) {
+                    matches = token.match(stateDef.getAbsoluteUrlRegex());
+                    if (matches !== null) {
+
+                        curStateDef = stateDef;
+                        do {
+                            allParams = curStateDef.getParams().concat(allParams);
+                        } while ((curStateDef = curStateDef.getParent()) !== null);
+
+
+                        if (allParams.length > 0) {
+
+                            for (var i = 0; i < allParams.length; i++) {
+                                paramsObj[allParams[i]] = matches[i+1];
+                            }
+                        }
+
+                        me.transitionTo(stateDef.getName(), paramsObj);
+                    }
+                }
+            }
+        }
+    },
+
+    handleCurrentHistoryToken: function (noHistoryTokenCallback) {
+        var me = this;
+        if (!me.ready) {
+            Ext.History.on('ready', function () {
+                me.handleCurrentHistoryToken(noHistoryTokenCallback);
+            }, me, { single: true });
+            return;
+        }
+
+        if (Ext.History.getToken()) {
+            me.onHistoryChanged(Ext.History.getToken());
+        } else {
+            Ext.callback(noHistoryTokenCallback, me);
+        }
+    },
+
     getController: function (name) {
         var controllerName = name;
 
@@ -82,7 +139,8 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     state: function (configOrName, optConfig) {
-        var newStateConfig = optConfig || {},
+        var me = this,
+            newStateConfig = optConfig || {},
             newStateDefinition,
             parentStateName,
             lastPeriodIndex;
@@ -109,16 +167,62 @@ Ext.define('StateRouter.staterouter.Router', {
         } else {
             parentStateName = newStateDefinition.getName().slice(0, lastPeriodIndex);
 
-            if (!this.stateDefinitionMap.hasOwnProperty(parentStateName)) {
+            if (!me.stateDefinitionMap.hasOwnProperty(parentStateName)) {
                 throw "Parent '" + parentStateName + "' not found";
             }
 
-            newStateDefinition.setParent(this.stateDefinitionMap[parentStateName]);
+            newStateDefinition.setParent(me.stateDefinitionMap[parentStateName]);
         }
 
-        this.stateDefinitionMap[newStateDefinition.getName()] = newStateDefinition;
+        // If URL is specified, the URL parameters will override the 'params' property
+        if (newStateDefinition.getUrl()) {
 
-        return this;
+            if (!me.historyInitialized) {
+                me.ready = false;
+                me.historyInitialized = true;
+
+                Ext.History.init(function () {
+                    me.ready = true;
+                });
+                Ext.History.on('change', me.onHistoryChanged, me);
+            }
+
+            // Since this state can be navigated to via a URL,
+            // all parents which have params must provide URLs
+            me.verifyAllParentsNavigable(newStateDefinition);
+
+            newStateDefinition.setAbsoluteUrl(newStateDefinition.getUrl());
+
+            if (newStateDefinition.getParent() && newStateDefinition.getParent().getUrl()) {
+                newStateDefinition.setAbsoluteUrl(newStateDefinition.getParent().getAbsoluteUrl() + newStateDefinition.getUrl());
+            }
+
+            // TODO: These vars belong at top of method
+            var parser = Ext.create('StateRouter.staterouter.UrlParser');
+            var parserResult = parser.parse(newStateDefinition.getAbsoluteUrl());
+            newStateDefinition.setAbsoluteUrlRegex(parserResult.regex);
+
+            parserResult = parser.parse(newStateDefinition.getUrl());
+            newStateDefinition.setParams(parserResult.params);
+        }
+
+        me.stateDefinitionMap[newStateDefinition.getName()] = newStateDefinition;
+
+        return me;
+    },
+
+
+    verifyAllParentsNavigable: function (stateDef) {
+        var parent = stateDef;
+
+        // Ensure all parent nodes that have at least one parameter specify a URL
+        while ((parent = parent.getParent()) !== null) {
+
+            if (!parent.getUrl() && parent.getParams().length > 0) {
+                throw "All parents of state '" + stateDef.getName() +
+                    "' which have params must provide a URL";
+            }
+        }
     },
 
     go: function (newStateName, stateParams, options) {
@@ -163,12 +267,11 @@ Ext.define('StateRouter.staterouter.Router', {
      *
      * @param newStateName
      * @param stateParams
-     * @param options
+     * @param [options]
      */
     transitionTo: function (newStateName, stateParams, options) {
         var me = this,
             toPath,
-            allStateParams = stateParams || {},
             fromPath,
             keep = 0,
             i,
@@ -177,19 +280,28 @@ Ext.define('StateRouter.staterouter.Router', {
             resolveBeforeTransition = [],
             transitionEvent;
 
+        if (!me.ready) {
+            Ext.History.on('ready', function () {
+                me.transitionTo(newStateName, stateParams, options);
+            }, me, { single: true });
+            return;
+        }
+
+        stateParams = stateParams || {};
+
         if (!me.stateDefinitionMap.hasOwnProperty(newStateName)) {
             throw new Error("Unknown state: '" + newStateName + "'");
         }
 
         // Build the path to the new state
-        toPath = me.buildToPath(newStateName, allStateParams);
+        toPath = me.buildToPath(newStateName, stateParams);
 
         me.inheritParams(toPath, options);
         me.setAllParamsForPath(toPath);
 
         // Build the toState
         me.toState = Ext.create('StateRouter.staterouter.State', {
-            allParams: allStateParams,
+            allParams: toPath[toPath.length - 1].getAllParams(),
             path: toPath
         });
 
@@ -224,6 +336,8 @@ Ext.define('StateRouter.staterouter.Router', {
 
             me.keep = keep;
 
+            me.copyResolveResultsToNewPath();
+
             // Allow states to cancel state transition
             if (!me.notifyAll(StateRouter.STATE_CHANGE_REQUEST, transitionEvent)) {
 
@@ -233,6 +347,10 @@ Ext.define('StateRouter.staterouter.Router', {
             }
 
             me.notifyAll(StateRouter.STATE_CHANGE_TRANSITIONING, transitionEvent);
+        }
+
+        if (!me.isLastNodeForwarding()) {
+            me.updateAddressBar(me.toState);
         }
 
         // Resolve all resolvable items in all controllers before entering new state
@@ -282,7 +400,7 @@ Ext.define('StateRouter.staterouter.Router', {
             // notified all, it would notify the wrong controllers.
             me.notifyKept(StateRouter.STATE_CHANGED, transitionEvent);
         }, function (error) {
-
+            me.updateAddressBar(me.currentState);
             me.notifyAll(StateRouter.STATE_CHANGE_FAILED, Ext.apply({ error: error}, transitionEvent));
             Ext.callback(me.errorHandler, me, [error]);
         });
@@ -290,9 +408,46 @@ Ext.define('StateRouter.staterouter.Router', {
         return true;
     },
 
+    updateAddressBar: function (state) {
+        var me = this,
+            absoluteUrl,
+            allParams;
+
+        if (!me.historyInitialized) {
+            return;
+        }
+
+        if (!state) {
+            Ext.History.add('/');
+        } else {
+            absoluteUrl = state.getPathNode().getDefinition().getAbsoluteUrl();
+            if (absoluteUrl !== null) {
+
+                allParams = state.getAllParams();
+
+                for (var param in allParams) {
+                    if (allParams.hasOwnProperty(param)) {
+                        absoluteUrl = absoluteUrl.replace(':' + param, allParams[param]);
+                    }
+                }
+
+                Ext.History.add(absoluteUrl);
+            } else {
+                Ext.History.add('/');
+            }
+        }
+    },
+
     getCurrentState: function () {
         if (this.currentState) {
             return this.currentState.getDefinitionName();
+        }
+        return null;
+    },
+
+    getCurrentStateParams: function () {
+        if (this.currentState) {
+            return this.currentState.getAllParams();
         }
         return null;
     },
@@ -356,6 +511,28 @@ Ext.define('StateRouter.staterouter.Router', {
             // make a copy of the current state of allParams
             // (otherwise each path node will reference the same object)
             toPath[i].allParams = Ext.apply({}, allParams);
+        }
+    },
+
+    /**
+     * This simply copies all of the kept state's resolved and allResolved properties into the new path.
+     *
+     * When a new state is navigated to, the State's list of PathNodes is created completely from scratch.
+     * Thus, these need to be copied over since we're not reexecuting kept resolvables.
+     */
+    copyResolveResultsToNewPath: function () {
+        var i,
+            fromPathNode,
+            toPathNode;
+
+        if (this.currentState) {
+            for (i = 0; i < this.keep; i++) {
+                fromPathNode = this.currentState.getPath()[i];
+                toPathNode = this.toState.getPath()[i];
+
+                toPathNode.resolved = fromPathNode.resolved;
+                toPathNode.allResolved = fromPathNode.allResolved;
+            }
         }
     },
 
@@ -517,6 +694,8 @@ Ext.define('StateRouter.staterouter.Router', {
                 me.saveResolveResults(results);
 
                 me.appendForwardedNode();
+
+                me.updateAddressBar(me.toState);
 
                 childInput = me.createInputForSequentialPromiseResolver([toPath[toPath.length - 1]]);
                 return StateRouter.staterouter.SequentialPromiseResolver.resolve(childInput, results);
@@ -732,6 +911,10 @@ Ext.define('StateRouter.staterouter.Router', {
 
     StateRouter.Router = new this();
 
+    StateRouter.handleCurrentHistoryToken = function(noHistoryTokenCallback) {
+        return StateRouter.Router.handleCurrentHistoryToken(noHistoryTokenCallback);
+    };
+
     StateRouter.configure = function(config) {
         return StateRouter.Router.configure(config);
     };
@@ -750,6 +933,10 @@ Ext.define('StateRouter.staterouter.Router', {
 
     StateRouter.getCurrentState = function() {
         return StateRouter.Router.getCurrentState();
+    };
+
+    StateRouter.getCurrentStateParams = function() {
+        return StateRouter.Router.getCurrentStateParams();
     };
 
 
