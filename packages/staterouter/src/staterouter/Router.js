@@ -25,7 +25,7 @@ Ext.define('StateRouter.staterouter.Router', {
     // Private state variables which change during transition
     keep: null,
     toState: null,
-
+    transitioning: false,
     ready: true,
     historyInitialized: false,
 
@@ -143,7 +143,9 @@ Ext.define('StateRouter.staterouter.Router', {
             newStateConfig = optConfig || {},
             newStateDefinition,
             parentStateName,
-            lastPeriodIndex;
+            lastPeriodIndex,
+            urlParser,
+            urlParserResult;
 
         if (Ext.isObject(configOrName)) {
             newStateConfig = configOrName;
@@ -197,13 +199,12 @@ Ext.define('StateRouter.staterouter.Router', {
                 newStateDefinition.setAbsoluteUrl(newStateDefinition.getParent().getAbsoluteUrl() + newStateDefinition.getUrl());
             }
 
-            // TODO: These vars belong at top of method
-            var parser = Ext.create('StateRouter.staterouter.UrlParser');
-            var parserResult = parser.parse(newStateDefinition.getAbsoluteUrl());
-            newStateDefinition.setAbsoluteUrlRegex(parserResult.regex);
+            urlParser = Ext.create('StateRouter.staterouter.UrlParser');
+            urlParserResult = urlParser.parse(newStateDefinition.getAbsoluteUrl());
+            newStateDefinition.setAbsoluteUrlRegex(urlParserResult.regex);
 
-            parserResult = parser.parse(newStateDefinition.getUrl());
-            newStateDefinition.setParams(parserResult.params);
+            urlParserResult = urlParser.parse(newStateDefinition.getUrl());
+            newStateDefinition.setParams(urlParserResult.params);
         }
 
         me.stateDefinitionMap[newStateDefinition.getName()] = newStateDefinition;
@@ -287,6 +288,10 @@ Ext.define('StateRouter.staterouter.Router', {
             return;
         }
 
+        if (me.transitioning) {
+            return;
+        }
+
         stateParams = stateParams || {};
 
         if (!me.stateDefinitionMap.hasOwnProperty(newStateName)) {
@@ -346,6 +351,7 @@ Ext.define('StateRouter.staterouter.Router', {
                 return false;
             }
 
+            me.transitioning = true;
             me.notifyAll(StateRouter.STATE_CHANGE_TRANSITIONING, transitionEvent);
         }
 
@@ -394,6 +400,7 @@ Ext.define('StateRouter.staterouter.Router', {
             });
         }).then(function() {
             me.currentState = me.toState;
+            me.transitioning = false;
 
             // We only need to notify the kept controllers that the state changed.
             // In fact, since currentState was already modified, if we had
@@ -401,6 +408,7 @@ Ext.define('StateRouter.staterouter.Router', {
             me.notifyKept(StateRouter.STATE_CHANGED, transitionEvent);
         }, function (error) {
             me.updateAddressBar(me.currentState);
+            me.transitioning = false;
             me.notifyAll(StateRouter.STATE_CHANGE_FAILED, Ext.apply({ error: error}, transitionEvent));
             Ext.callback(me.errorHandler, me, [error]);
         });
