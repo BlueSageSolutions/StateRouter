@@ -455,7 +455,7 @@ Ext.define('StateRouter.staterouter.Router', {
 
     getCurrentStateParams: function () {
         if (this.currentState) {
-            return this.currentState.getAllParams();
+            return Ext.apply({}, this.currentState.getAllParams());
         }
         return null;
     },
