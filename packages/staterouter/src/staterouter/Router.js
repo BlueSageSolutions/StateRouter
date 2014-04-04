@@ -102,6 +102,7 @@ Ext.define('StateRouter.staterouter.Router', {
                         }
 
                         me.transitionTo(stateDef.getName(), paramsObj);
+                        return;
                     }
                 }
             }
@@ -446,6 +447,10 @@ Ext.define('StateRouter.staterouter.Router', {
         }
     },
 
+    getHref: function (stateName, allParams) {
+
+    },
+
     getCurrentState: function () {
         if (this.currentState) {
             return this.currentState.getDefinitionName();
@@ -735,6 +740,7 @@ Ext.define('StateRouter.staterouter.Router', {
 
                 if (controller && controller.resolve) {
                     nodeObj.resolve = controller.resolve;
+                    nodeObj.scope = controller;
                 }
             }
 
