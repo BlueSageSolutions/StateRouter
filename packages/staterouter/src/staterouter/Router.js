@@ -403,10 +403,8 @@ Ext.define('StateRouter.staterouter.Router', {
             me.currentState = me.toState;
             me.transitioning = false;
 
-            // We only need to notify the kept controllers that the state changed.
-            // In fact, since currentState was already modified, if we had
-            // notified all, it would notify the wrong controllers.
-            me.notifyKept(StateRouter.STATE_CHANGED, transitionEvent);
+            // We notify all except the last node
+            me.notifyAncestors(StateRouter.STATE_CHANGED, transitionEvent);
         }, function (error) {
             me.updateAddressBar(me.currentState);
             me.transitioning = false;
@@ -562,6 +560,11 @@ Ext.define('StateRouter.staterouter.Router', {
     notifyKept: function (eventName, eventObj) {
         if (!this.currentState) { return; }
         return this.doNotify(eventName, eventObj, 0, this.keep);
+    },
+
+    notifyAncestors: function (eventName, eventObj) {
+        if (!this.currentState) { return; }
+        return this.doNotify(eventName, eventObj, 0, this.currentState.getPath().length - 1);
     },
 
     doNotify: function (eventName, eventObj, startIndex, endIndex) {
