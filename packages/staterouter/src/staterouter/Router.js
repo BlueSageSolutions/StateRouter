@@ -201,7 +201,7 @@ Ext.define('StateRouter.staterouter.Router', {
             }
 
             urlParser = Ext.create('StateRouter.staterouter.UrlParser');
-            urlParserResult = urlParser.parse(newStateDefinition.getAbsoluteUrl());
+            urlParserResult = urlParser.parse(newStateDefinition.getAbsoluteUrl(), me.getAllUrlParamConditions(newStateDefinition));
             newStateDefinition.setAbsoluteUrlRegex(urlParserResult.regex);
 
             urlParserResult = urlParser.parse(newStateDefinition.getUrl());
@@ -225,6 +225,19 @@ Ext.define('StateRouter.staterouter.Router', {
                     "' which have params must provide a URL";
             }
         }
+    },
+
+    getAllUrlParamConditions: function (stateDef) {
+        var conditions = {},
+            curStateDef = stateDef;
+
+        do {
+            if (curStateDef.getConditions()) {
+                conditions = Ext.apply(conditions, curStateDef.getConditions());
+            }
+        } while ((curStateDef = curStateDef.getParent()) !== null);
+
+        return conditions;
     },
 
     go: function (newStateName, stateParams, options) {

@@ -1,12 +1,13 @@
 Ext.define('StateRouter.staterouter.UrlParser', {
 
-    parse: function(pattern) {
+    parse: function(pattern, conditions) {
         /**
          * Find all words which start with ':'
          * @type {RegExp}
          */
         var reg = /:((?:\w)+)/g,
             regResult,
+            param,
             result = {},
             lastIndex = 0,
             urlSegment;
@@ -15,12 +16,17 @@ Ext.define('StateRouter.staterouter.UrlParser', {
         result.regex = '^';
 
         while ((regResult = reg.exec(pattern))) {
-            result.params.push(regResult[1]);
+            param = regResult[1];
+            result.params.push(param);
 
             urlSegment = pattern.substring(lastIndex, regResult.index);
             urlSegment = urlSegment.replace(/\//g, '\\/');
 
-            result.regex += urlSegment + '((?:\\w)+)';
+            if (conditions && conditions[param]) {
+                result.regex += urlSegment + conditions[param];
+            } else {
+                result.regex += urlSegment + '(\\w+)';
+            }
 
             lastIndex = reg.lastIndex;
         }

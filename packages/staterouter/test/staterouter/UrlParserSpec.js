@@ -20,7 +20,7 @@ describe('UrlParser', function() {
 
         expect(result).not.toBeUndefined();
         expect(result.regex).not.toBeUndefined();
-        expect(result.regex).toBe('^\\/contact\\/((?:\\w)+)$');
+        expect(result.regex).toBe('^\\/contact\\/(\\w+)$');
         expect(new RegExp(result.regex).test('/contact/355')).toBe(true);
         expect(result.params.length).toBe(1);
         expect(result.params[0]).toBe('contactId');
@@ -31,8 +31,25 @@ describe('UrlParser', function() {
 
         expect(result).not.toBeUndefined();
         expect(result.regex).not.toBeUndefined();
-        expect(result.regex).toBe('^\\/contact\\/((?:\\w)+)\\/edit\\/((?:\\w)+)$');
+        expect(result.regex).toBe('^\\/contact\\/(\\w+)\\/edit\\/(\\w+)$');
         expect(new RegExp(result.regex).test('/contact/355/edit/abc')).toBe(true);
+        expect(result.params.length).toBe(2);
+        expect(result.params[0]).toBe('contactId');
+        expect(result.params[1]).toBe('id');
+    });
+
+    it('should allow conditions to restrict types', function () {
+        var result = parser.parse('/contact/:contactId/edit/:id', {
+            contactId: '([0-9]*)',
+            id: '([A-Za-z]+)'
+        });
+
+        expect(result).not.toBeUndefined();
+        expect(result.regex).not.toBeUndefined();
+        expect(result.regex).toBe('^\\/contact\\/([0-9]*)\\/edit\\/([A-Za-z]+)$');
+        expect(new RegExp(result.regex).test('/contact/355/edit/abc')).toBe(true);
+        expect(new RegExp(result.regex).test('/contact//edit/abc')).toBe(true);
+        expect(new RegExp(result.regex).test('/contact/a/edit/abc')).toBe(false);
         expect(result.params.length).toBe(2);
         expect(result.params[0]).toBe('contactId');
         expect(result.params[1]).toBe('id');

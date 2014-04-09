@@ -1164,6 +1164,77 @@ describe("Router", function() {
                 expect(router.getCurrentState()).toBe('home.contact');
             });
         });
+
+        it("should allow custom regex for params", function () {
+            router.state('home', {
+                url: '/home'
+            });
+            router.state('home.contact', {
+                url: '/contact/:id/:name',
+                conditions: {
+                    id: '([0-9]*)',
+                    name: '([a-z]*)'
+                }
+            });
+            router.state('home.contact.address', {
+                url: '/address/edit/:addressId',
+                conditions: {
+                    addressId: '([a-z]+)'
+                }
+            });
+
+            router.onHistoryChanged('/home/contact///address/edit/b');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home.contact.address');
+                expect(router.getCurrentStateParams().id).toBe('');
+                expect(router.getCurrentStateParams().name).toBe('');
+                expect(router.getCurrentStateParams().addressId).toBe('b');
+            });
+
+            runs(function() {
+                router.onHistoryChanged('/home/contact/a//address/edit/b');
+            });
+
+            waits(1);
+
+            // The state hasn't changed since 'a' is invalid
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home.contact.address');
+                expect(router.getCurrentStateParams().id).toBe('');
+                expect(router.getCurrentStateParams().name).toBe('');
+                expect(router.getCurrentStateParams().addressId).toBe('b');
+            });
+
+            runs(function() {
+                router.onHistoryChanged('/home/contact/0/a/address/edit/');
+            });
+
+            waits(1);
+
+            // The state hasn't changed since addressId requires min 1 char
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home.contact.address');
+                expect(router.getCurrentStateParams().id).toBe('');
+                expect(router.getCurrentStateParams().name).toBe('');
+                expect(router.getCurrentStateParams().addressId).toBe('b');
+            });
+
+            runs(function() {
+                router.onHistoryChanged('/home/contact/111/aaa/address/edit/ccc');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home.contact.address');
+                expect(router.getCurrentStateParams().id).toBe('111');
+                expect(router.getCurrentStateParams().name).toBe('aaa');
+                expect(router.getCurrentStateParams().addressId).toBe('ccc');
+            });
+        });
     });
 
 });
