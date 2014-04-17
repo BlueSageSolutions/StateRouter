@@ -325,6 +325,8 @@ Ext.define('StateRouter.staterouter.Router', {
         });
 
         transitionEvent = {
+            params: stateParams,
+            options: options,
             toState: newStateName,
             fromState: null
         };
