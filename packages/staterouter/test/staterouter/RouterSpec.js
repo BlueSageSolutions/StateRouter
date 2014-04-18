@@ -484,6 +484,68 @@ describe("Router", function() {
                 expect(router.getCurrentState()).toBe('state1.contact.summary');
             });
         });
+
+        it("should send the forwarded state name in the STATE_CHANGED event, but not STATE_CHANGE_REQUEST", function () {
+            var toStateRequest,
+                toStateChange,
+                controllerB,
+                controllerZ;
+
+            controllerB = {
+                onStateRouterEvent: function (eventName, eventObj) {
+                    if (eventName === StateRouter.STATE_CHANGED) {
+                        toStateChange = eventObj.toState;
+                    }
+                }
+            };
+
+            controllerZ = {
+                onStateRouterEvent: function (eventName, eventObj) {
+                    if (eventName === StateRouter.STATE_CHANGE_REQUEST) {
+                        toStateRequest = eventObj.toState;
+                    }
+                }
+            };
+
+            runs(function () {
+                router.configure({
+                    controllerProvider: function (name) {
+                        if (name === 'b') {
+                            return controllerB;
+                        } else if (name === 'z') {
+                            return controllerZ;
+                        }
+                        return {};
+                    }
+                });
+                router.state('a', {});
+                router.state('a.b', {
+                    controller: 'b',
+                    forwardToChild: function () {
+                        return 'a.b.c';
+                    }
+                });
+                router.state('a.b.c', {});
+                router.state('z', {
+                    controller: 'z'
+                });
+                router.go('z');
+            });
+
+
+            waits(1);
+
+            runs(function () {
+               router.go('a.b');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(toStateRequest).toBe('a.b');
+                expect(toStateChange).toBe('a.b.c');
+            });
+        });
     });
 
     describe("Controllers", function() {

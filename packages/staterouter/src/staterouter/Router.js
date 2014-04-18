@@ -403,6 +403,13 @@ Ext.define('StateRouter.staterouter.Router', {
             // exceptions are being eaten by RSVP
             return new RSVP.Promise(function (resolve) {
 
+                // Because the last node may forward to a child and we do not know what the forwarded
+                // state is until the the resolvables are resolved, we only know the final
+                // state at this point (when forwardToChild)
+                transitionEvent.toState = me.toState.getDefinitionName();
+
+                // TODO: currentState should possibly be set to null, but it's used by stopDiscardedControllers
+
                 // the results array includes SequentialPromiseResolver results and the transition results
                 me.saveResolveResults(results[0]);
 
