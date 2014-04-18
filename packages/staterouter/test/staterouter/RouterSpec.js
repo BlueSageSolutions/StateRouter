@@ -165,6 +165,91 @@ describe("Router", function() {
             });
         });
 
+        it("when transitioning down, last node should not receive state change event", function () {
+            var count = 0;
+
+            runs(function () {
+                var controller = {
+
+                    onStateRouterEvent: function (eventName, eventObj) {
+                        if (eventName === StateRouter.STATE_CHANGED) {
+                            count++;
+                        }
+                    }
+                };
+
+                router.configure({
+                    controllerProvider: function (name) {
+                        if (name === 'c') {
+                            return controller;
+                        }
+                        return null;
+                    }
+                });
+                router.state('a', {});
+                router.state('a.b', {});
+                router.state('a.b.c', { controller: 'c'});
+                router.go('a.b');
+            });
+
+            waits(1);
+
+            runs(function () {
+                router.go('a.b.c');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(count).toBe(0);
+            });
+        });
+
+        it("when transitioning up, last node SHOULD receive state change event", function () {
+            var count = 0,
+                upCount = 0;
+
+            runs(function () {
+                var controller = {
+
+                    onStateRouterEvent: function (eventName, eventObj) {
+                        if (eventName === StateRouter.STATE_CHANGED) {
+                            count++;
+                            if (eventObj.fromState === '1.2' && eventObj.toState === '1') {
+                                upCount++;
+                            }
+                        }
+                    }
+                };
+
+                router.configure({
+                    controllerProvider: function (name) {
+                        if (name === '1') {
+                            return controller;
+                        }
+                        return null;
+                    }
+                });
+                router.state('1', { controller: '1'});
+                router.state('1.2', {});
+                router.state('1.2.3', {});
+                router.go('1.2');
+            });
+
+            waits(1);
+
+            runs(function () {
+                router.go('1');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(count).toBe(2);
+                expect(upCount).toBe(1);
+            });
+        });
+
         it("should allow you to transition from no state to any state", function () {
             runs(function () {
                 router.state('state1', {});
@@ -493,6 +578,74 @@ describe("Router", function() {
 
             runs(function () {
                 expect(value).toBe(1);
+            });
+        });
+
+        it("should not pass child params to parent controllers", function () {
+            var homeId,
+                homeId2,
+                homeId3,
+                contactId,
+                contactId2,
+                contactId3,
+                summaryId,
+                summaryId2,
+                summaryId3;
+
+            router.configure({controllerProvider: function (name) {
+                if (name === 'home') {
+                    return {
+                        start: function (ownParams, allParams) {
+                            homeId = allParams.homeId;
+                            contactId = allParams.contactId;
+                            summaryId = allParams.summaryId;
+                        }
+                    };
+                }
+                if (name === 'home.contact') {
+                    return {
+                        start: function (ownParams, allParams) {
+                            homeId2 = allParams.homeId;
+                            contactId2 = allParams.contactId;
+                            summaryId2 = allParams.summaryId;
+                        }
+                    };
+                }
+                if (name === 'home.contact.summary') {
+                    return {
+                        start: function (ownParams, allParams) {
+                            homeId3 = allParams.homeId;
+                            contactId3 = allParams.contactId;
+                            summaryId3 = allParams.summaryId;
+                        }
+                    };
+                }
+                return {};
+            }});
+
+            router
+                .state('home', {controller: 'home', params: ['homeId']})
+                .state('home.contact', {controller: 'home.contact', params: ['contactId']})
+                .state('home.contact.summary', {controller: 'home.contact.summary', params: ['summaryId']});
+
+            router.go('home.contact.summary', {
+                homeId: 500,
+                contactId: 600,
+                summaryId: 700
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(homeId).toBe(500);
+                expect(homeId2).toBe(500);
+                expect(homeId3).toBe(500);
+                expect(contactId).toBeUndefined();
+                expect(contactId2).toBe(600);
+                expect(contactId3).toBe(600);
+                expect(summaryId).toBeUndefined();
+                expect(summaryId2).toBeUndefined();
+                expect(summaryId3).toBe(700);
             });
         });
 

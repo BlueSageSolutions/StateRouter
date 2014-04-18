@@ -418,8 +418,14 @@ Ext.define('StateRouter.staterouter.Router', {
             me.currentState = me.toState;
             me.transitioning = false;
 
-            // We notify all except the last node
-            me.notifyAncestors(StateRouter.STATE_CHANGED, transitionEvent);
+            // If we've kept everything, then it means we navigated to some parent state
+            // we must notify the last node to it knows to update its UI
+            if (me.keep === me.currentState.getPath().length) {
+                me.notifyAll(StateRouter.STATE_CHANGED, transitionEvent);
+            } else {
+                // We notify all except the last node
+                me.notifyAncestors(StateRouter.STATE_CHANGED, transitionEvent);
+            }
         }, function (error) {
             me.updateAddressBar(me.currentState);
             me.transitioning = false;
