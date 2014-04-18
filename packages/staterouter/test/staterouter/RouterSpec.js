@@ -657,28 +657,28 @@ describe("Router", function() {
             router.configure({controllerProvider: function (name) {
                 if (name === 'home') {
                     return {
-                        start: function (ownParams, allParams) {
-                            homeId = allParams.homeId;
-                            contactId = allParams.contactId;
-                            summaryId = allParams.summaryId;
+                        start: function (params) {
+                            homeId = params.homeId;
+                            contactId = params.contactId;
+                            summaryId = params.summaryId;
                         }
                     };
                 }
                 if (name === 'home.contact') {
                     return {
-                        start: function (ownParams, allParams) {
-                            homeId2 = allParams.homeId;
-                            contactId2 = allParams.contactId;
-                            summaryId2 = allParams.summaryId;
+                        start: function (params) {
+                            homeId2 = params.homeId;
+                            contactId2 = params.contactId;
+                            summaryId2 = params.summaryId;
                         }
                     };
                 }
                 if (name === 'home.contact.summary') {
                     return {
-                        start: function (ownParams, allParams) {
-                            homeId3 = allParams.homeId;
-                            contactId3 = allParams.contactId;
-                            summaryId3 = allParams.summaryId;
+                        start: function (params) {
+                            homeId3 = params.homeId;
+                            contactId3 = params.contactId;
+                            summaryId3 = params.summaryId;
                         }
                     };
                 }
@@ -901,15 +901,15 @@ describe("Router", function() {
                     }
                     if (name === 'home.contact') {
                         return {
-                            start: function (ownParams) {
-                                contactIdParam = ownParams.contactId;
+                            start: function (params) {
+                                contactIdParam = params.contactId;
                             }
                         };
                     }
                     if (name === 'home.contact.summary') {
                         return {
-                            start: function (ownParams, allParams) {
-                                forwardedContactIdParam = allParams.contactId;
+                            start: function (params) {
+                                forwardedContactIdParam = params.contactId;
                             }
                         };
                     }
@@ -1089,8 +1089,7 @@ describe("Router", function() {
                 alias: 'widget.mainview',
 
                 config: {
-                    ownParams: null,
-                    allParams: null,
+                    params: null,
                     resolved: null,
                     allResolved: null
                 },
@@ -1105,14 +1104,12 @@ describe("Router", function() {
                 extend: 'Ext.container.Container',
                 alias: 'widget.childview',
 
-                myOwnParams: null,
-                myAllParams: null,
+                myParams: null,
                 myResolved: null,
                 myAllResolved: null,
 
                 constructor: function (options) {
-                    this.myOwnParams = options.ownParams;
-                    this.myAllParams = options.allParams;
+                    this.myParams = options.params;
                     this.myResolved = options.resolved;
                     this.myAllResolved = options.allResolved;
                     this.callParent(arguments);
@@ -1213,7 +1210,7 @@ describe("Router", function() {
             }});
             router.state('state1', {
                 controller: 'controller1',
-                forwardToChild: function (ownParams, resolved) {
+                forwardToChild: function (params, resolved) {
                     return resolved.menu;
                 }
             });

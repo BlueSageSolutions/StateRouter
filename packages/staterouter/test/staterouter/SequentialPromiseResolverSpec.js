@@ -84,14 +84,14 @@ describe("SequentialPromiseResolver", function() {
             pathNode: mainContactPathNode,
             resolve: {
                 // can have same resolve name as another node
-                a: function (resolve, reject, ownParams, allParams, previouslyResolved) {
+                a: function (resolve, reject, params, previouslyResolved) {
                     resolve(previouslyResolved.main.a + previouslyResolved.main.b + 'World');
                 }
             }
         }, {
             pathNode: mainContactAddressPathNode,
             resolve: {
-                last: function (resolve, reject, ownParams, allParams, previouslyResolved) {
+                last: function (resolve, reject, params, previouslyResolved) {
                     resolve(previouslyResolved['main.contact'].a + '!!');
                 }
             }
@@ -140,7 +140,7 @@ describe("SequentialPromiseResolver", function() {
         promiseArr2 = [{
             pathNode: mainContactPathNode,
             resolve: {
-                b: function (resolve, reject, ownParams, allParams, previouslyResolved) {
+                b: function (resolve, reject, params, previouslyResolved) {
                     resolve(previouslyResolved.main.a + " World");
                 }
             }
@@ -200,9 +200,8 @@ describe("SequentialPromiseResolver", function() {
         promiseArr = [{
             pathNode: mainPathNode,
             resolve: {
-                a: function (resolve, reject, ownParams, allParams) {
-                    expect(ownParams.user).toEqual('bob');
-                    expect(allParams.user).toEqual('bob');
+                a: function (resolve, reject, params) {
+                    expect(params.user).toEqual('bob');
                     resolve();
                 }
             }
@@ -210,14 +209,10 @@ describe("SequentialPromiseResolver", function() {
             pathNode: mainContactPathNode,
             resolve: {
                 // can have same resolve name as another node
-                a: function (resolve, reject, ownParams, allParams) {
-                    expect(ownParams.user).toBeUndefined('bob');
-                    expect(ownParams.id).toEqual('1');
-                    expect(ownParams.contactId).toEqual('2');
-                    expect(allParams.user).toEqual('bob');
-                    expect(allParams.id).toEqual('1');
-                    expect(allParams.contactId).toEqual('2');
-
+                a: function (resolve, reject, params) {
+                    expect(params.id).toEqual('1');
+                    expect(params.contactId).toEqual('2');
+                    expect(params.user).toEqual('bob');
                     resolve();
                 }
             }

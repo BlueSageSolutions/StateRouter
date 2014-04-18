@@ -839,7 +839,7 @@ Ext.define('StateRouter.staterouter.Router', {
             if (stateDefinition.getController()) {
                 var controller = me.getController(stateDefinition.getController());
 
-                Ext.callback(controller[me.startFnName], controller, [pathNode.getOwnParams(), pathNode.getAllParams()]);
+                Ext.callback(controller[me.startFnName], controller, [pathNode.getAllParams()]);
             }
         }
     },
@@ -895,7 +895,7 @@ Ext.define('StateRouter.staterouter.Router', {
 
             // If the view is actually a function, we need to execute it to determine the actual view class
             if (Ext.isFunction(stateDefinition.getView())) {
-                viewClass = stateDefinition.getView()(ownParams, allParams, resolved, previouslyResolved);
+                viewClass = stateDefinition.getView()(allParams, resolved, previouslyResolved);
             }
 
             if (this.viewProcessorFn) {
@@ -907,8 +907,7 @@ Ext.define('StateRouter.staterouter.Router', {
             parentComponent.removeAll();
 
             Ext.apply(viewConfig, {
-                ownParams: ownParams,
-                allParams: allParams,
+                params: allParams,
                 resolved: resolved,
                 allResolved: previouslyResolved
             });

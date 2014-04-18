@@ -48,7 +48,7 @@ Ext.define('StateRouter.staterouter.SequentialPromiseResolver', {
 
                     // Create a promise which calls the resolve function
                     resolvePromiseFn = stateObj.resolve[resolveKey];
-                    promises[resolveKey] = me.createPromise(resolvePromiseFn, scope, pathNode.getOwnParams(), pathNode.getAllParams(), allResults);
+                    promises[resolveKey] = me.createPromise(resolvePromiseFn, scope, pathNode.getAllParams(), allResults);
                 }
             }
 
@@ -58,9 +58,9 @@ Ext.define('StateRouter.staterouter.SequentialPromiseResolver', {
         return newPromise;
     },
 
-    createPromise: function (resolveFn, scope, ownParams, allParams, allResults) {
+    createPromise: function (resolveFn, scope, allParams, allResults) {
         return new RSVP.Promise(function (resolve, reject) {
-            resolveFn.call(scope, resolve, reject, ownParams, allParams, allResults);
+            resolveFn.call(scope, resolve, reject, allParams, allResults);
         });
     },
 

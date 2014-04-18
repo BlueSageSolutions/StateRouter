@@ -4,8 +4,8 @@
     "creator": "Jonathan Janisch",
     "summary": "UI state router supporting nested states",
     "detailedDescription": "UI state router supporting nested states",
-    "version": "0.3.12",
-    "compatVersion": "0.3.11",
+    "version": "0.3.13",
+    "compatVersion": "0.3.13",
     "format": "1",
     "local": true,
     "requires": []
