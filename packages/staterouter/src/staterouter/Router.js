@@ -595,17 +595,17 @@ Ext.define('StateRouter.staterouter.Router', {
         return this.doNotify(eventName, eventObj, 0, this.currentState.getPath().length - 1);
     },
 
-    doNotify: function (eventName, eventObj, startIndex, endIndex) {
+    doNotify: function (eventName, eventObj, startIndex, endIndex, path) {
         var canceled = false,
             i,
-            fromPath = this.currentState.getPath(),
+            pathArray = path || this.currentState.getPath(),
             result,
             stateDefinition,
             controller,
             controllerKept;
 
         for (i = startIndex; i < endIndex; i++) {
-            stateDefinition = fromPath[i].getDefinition();
+            stateDefinition = pathArray[i].getDefinition();
 
             if (stateDefinition.getController()) {
                 controller = this.getController(stateDefinition.getController());
@@ -826,18 +826,28 @@ Ext.define('StateRouter.staterouter.Router', {
             toPath = this.toState.getPath(),
             i,
             pathNode,
-            stateDefinition;
+            stateDefinition,
+            controllerName;
 
         for (i = this.keep; i < toPath.length; i++) {
             pathNode = toPath[i];
+            stateDefinition = pathNode.getDefinition();
+
+            if (stateDefinition.getController()) {
+                controllerName = stateDefinition.getController();
+            }
+
+            // Notify all ancestors of the toState's path that a new state is being activated
+            me.doNotify(StateRouter.STATE_PATH_STARTING, {
+                state: stateDefinition.getName(),
+                controller: controllerName
+            }, 0, i, toPath);
 
             me.insertChildIntoParentView(pathNode, i, toPath);
 
-            stateDefinition = pathNode.getDefinition();
-
             // Get the controller and call its start method
-            if (stateDefinition.getController()) {
-                var controller = me.getController(stateDefinition.getController());
+            if (controllerName) {
+                var controller = me.getController(controllerName);
 
                 Ext.callback(controller[me.startFnName], controller, [pathNode.getAllParams()]);
             }
@@ -990,6 +1000,7 @@ Ext.define('StateRouter.staterouter.Router', {
     StateRouter.STATE_CHANGE_FAILED = 'stateChangeFailed';
     StateRouter.STATE_CHANGE_TRANSITIONING = 'stateChangeTransitioning';
     StateRouter.STATE_CHANGED = 'stateChanged';
+    StateRouter.STATE_PATH_STARTING = 'statePathStarting';
 
     // Utility methods
     StateRouter.isOrHasChild = function (parentStateName, childStateName) {
