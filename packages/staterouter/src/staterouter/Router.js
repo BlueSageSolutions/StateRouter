@@ -849,7 +849,7 @@ Ext.define('StateRouter.staterouter.Router', {
             if (controllerName) {
                 var controller = me.getController(controllerName);
 
-                Ext.callback(controller[me.startFnName], controller, [pathNode.getAllParams()]);
+                Ext.callback(controller[me.startFnName], controller, [pathNode.getAllParams(), stateDefinition.getName()]);
             }
         }
     },

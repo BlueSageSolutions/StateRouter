@@ -613,6 +613,39 @@ describe("Router", function() {
             });
         });
 
+        it("should pass state name to controller", function () {
+            var aState,
+                bState;
+
+            router.configure({
+                controllerProvider: function (name) {
+                if (name === 'a') {
+                    return {
+                        start: function (stateParams, stateName) {
+                            aState = stateName;
+                        }
+                    };
+                } else if (name === 'b') {
+                    return {
+                        start: function (stateParams, stateName) {
+                            bState = stateName;
+                        }
+                    };
+                }
+                return null;
+            }});
+            router.state('a', {controller: 'a'});
+            router.state('a.b', {controller: 'b'});
+            router.go('a.b');
+
+            waits(1);
+
+            runs(function () {
+                expect(aState).toBe('a');
+                expect(bState).toBe('a.b');
+            });
+        });
+
         it("should not restart controllers if transitioning to child", function () {
             var value = 0;
 
