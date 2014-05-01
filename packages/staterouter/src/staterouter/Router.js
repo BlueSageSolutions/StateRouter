@@ -587,18 +587,30 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     notifyDiscarded: function (eventName, eventObj) {
+        if (!this.currentState) {
+            return this.fireEvent(eventName, eventObj);
+        }
         return this.doNotify(eventName, eventObj, this.keep, this.currentState.getPath().length);
     },
 
     notifyAll: function (eventName, eventObj) {
+        if (!this.currentState) {
+            return this.fireEvent(eventName, eventObj);
+        }
         return this.doNotify(eventName, eventObj, 0, this.currentState.getPath().length);
     },
 
     notifyKept: function (eventName, eventObj) {
+        if (!this.currentState) {
+            return this.fireEvent(eventName, eventObj);
+        }
         return this.doNotify(eventName, eventObj, 0, this.keep);
     },
 
     notifyAncestors: function (eventName, eventObj) {
+        if (!this.currentState) {
+            return this.fireEvent(eventName, eventObj);
+        }
         return this.doNotify(eventName, eventObj, 0, this.currentState.getPath().length - 1);
     },
 
@@ -632,15 +644,18 @@ Ext.define('StateRouter.staterouter.Router', {
             }
         }
 
-        if (this.app) {
-            result = this.app.fireEvent(eventName, eventObj);
-
-            if (result === false) {
-                canceled = true;
-            }
+        if (this.fireEvent(eventName, eventObj) === false) {
+            canceled = true;
         }
 
         return !canceled;
+    },
+
+    fireEvent: function (eventName, eventObj) {
+        if (this.app) {
+            return this.app.fireEvent(eventName, eventObj);
+        }
+        return;
     },
 
     stopDiscardedControllers: function () {
