@@ -38,34 +38,45 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     configure: function (config) {
-        this.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
+        var me = this;
+        me.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
         if (config) {
             if (config.hasOwnProperty('root')) {
-                this.rootComponentId = config.root;
+                me.rootComponentId = config.root;
+            }
+
+            if (config.hasOwnProperty('app')) {
+                me.app = config.app;
             }
 
             if (config.hasOwnProperty('controllerProvider')) {
-                this.controllerProviderFn = config.controllerProvider;
+                me.controllerProviderFn = config.controllerProvider;
             }
 
             if (config.hasOwnProperty('controllerProcessor')) {
-                this.controllerProcessorFn = config.controllerProcessor;
+                me.controllerProcessorFn = config.controllerProcessor;
             }
 
             if (config.hasOwnProperty('viewProcessor')) {
-                this.viewProcessorFn = config.viewProcessor;
+                me.viewProcessorFn = config.viewProcessor;
             }
 
             if (config.hasOwnProperty('start')) {
-                this.startFnName = config.start;
+                me.startFnName = config.start;
             }
 
             if (config.hasOwnProperty('stop')) {
-                this.stopFnName = config.stop;
+                me.stopFnName = config.stop;
             }
 
             if (config.hasOwnProperty('errorHandler')) {
-                this.errorHandler = config.errorHandler;
+                me.errorHandler = config.errorHandler;
+            }
+
+            if (me.app && !me.controllerProviderFn) {
+                me.controllerProviderFn = function (name) {
+                    return me.app.getController(name);
+                };
             }
         }
 
@@ -576,48 +587,56 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     notifyDiscarded: function (eventName, eventObj) {
-        if (!this.currentState) { return; }
         return this.doNotify(eventName, eventObj, this.keep, this.currentState.getPath().length);
     },
 
     notifyAll: function (eventName, eventObj) {
-        if (!this.currentState) { return; }
         return this.doNotify(eventName, eventObj, 0, this.currentState.getPath().length);
     },
 
     notifyKept: function (eventName, eventObj) {
-        if (!this.currentState) { return; }
         return this.doNotify(eventName, eventObj, 0, this.keep);
     },
 
     notifyAncestors: function (eventName, eventObj) {
-        if (!this.currentState) { return; }
         return this.doNotify(eventName, eventObj, 0, this.currentState.getPath().length - 1);
     },
 
     doNotify: function (eventName, eventObj, startIndex, endIndex, path) {
         var canceled = false,
             i,
-            pathArray = path || this.currentState.getPath(),
+            pathArray,
             result,
             stateDefinition,
             controller,
             controllerKept;
 
-        for (i = startIndex; i < endIndex; i++) {
-            stateDefinition = pathArray[i].getDefinition();
+        if (this.currentState) {
+            pathArray = path || this.currentState.getPath();
 
-            if (stateDefinition.getController()) {
-                controller = this.getController(stateDefinition.getController());
+            for (i = startIndex; i < endIndex; i++) {
+                stateDefinition = pathArray[i].getDefinition();
 
-                if (controller.onStateRouterEvent) {
-                    controllerKept = (i < this.keep);
-                    result = controller.onStateRouterEvent(eventName, eventObj, controllerKept);
+                if (stateDefinition.getController()) {
+                    controller = this.getController(stateDefinition.getController());
 
-                    if (result === false) {
-                        canceled = true;
+                    if (controller.onStateRouterEvent) {
+                        controllerKept = (i < this.keep);
+                        result = controller.onStateRouterEvent(eventName, eventObj, controllerKept);
+
+                        if (result === false) {
+                            canceled = true;
+                        }
                     }
                 }
+            }
+        }
+
+        if (this.app) {
+            result = this.app.fireEvent(eventName, eventObj);
+
+            if (result === false) {
+                canceled = true;
             }
         }
 

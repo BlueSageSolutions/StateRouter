@@ -646,6 +646,48 @@ describe("Router", function() {
             });
         });
 
+        it("should fire application level events if application configured", function () {
+            var ready,
+                stateChanged = false,
+                app;
+
+            Ext.application({
+                name: 'MyApp',
+                launch: function() {
+                    ready = true;
+                }
+            });
+
+            waits(100);
+
+            runs(function () {
+                expect(ready).toBe(true);
+
+                app = MyApp.getApplication();
+                expect(app).not.toBeUndefined();
+
+                app.on(StateRouter.STATE_CHANGED, function () {
+                    stateChanged = true;
+                });
+
+                router.configure({
+                    app: app,
+                    controllerProvider: function (name) {
+                        return {};
+                    }
+                });
+                router.state('a', {controller: 'a'});
+                router.state('a.b', {controller: 'b'});
+                router.go('a.b');
+            });
+
+            waits(100);
+
+            runs(function () {
+                expect(stateChanged).toBe(true);
+            });
+        });
+
         it("should not restart controllers if transitioning to child", function () {
             var value = 0;
 
