@@ -1209,7 +1209,7 @@ describe("Router", function() {
                     params: null,
                     resolved: null,
                     allResolved: null,
-                    stateName: null,
+                    stateName: null
                 },
 
                 items: [{
