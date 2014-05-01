@@ -802,6 +802,7 @@ Ext.define('StateRouter.staterouter.Router', {
 
             if (controllerName) {
                 controller = this.getController(controllerName);
+                controller.stateName = stateDefinition.getName();
 
                 if (controller && controller.resolve) {
                     nodeObj.resolve = controller.resolve;
@@ -882,6 +883,7 @@ Ext.define('StateRouter.staterouter.Router', {
             // Get the controller and call its start method
             if (controllerName) {
                 var controller = me.getController(controllerName);
+                controller.stateName = stateDefinition.getName();
 
                 Ext.callback(controller[me.startFnName], controller, [pathNode.getAllParams(), stateDefinition.getName()]);
             }
@@ -920,7 +922,6 @@ Ext.define('StateRouter.staterouter.Router', {
     insertChildIntoParentView: function (pathNode, nodeIndex, path) {
         var me = this,
             stateDefinition = pathNode.getDefinition(),
-            ownParams = pathNode.getOwnParams(),
             allParams = pathNode.getAllParams(),
             resolved = pathNode.resolved,
             previouslyResolved = pathNode.allResolved,
@@ -953,7 +954,8 @@ Ext.define('StateRouter.staterouter.Router', {
             Ext.apply(viewConfig, {
                 params: allParams,
                 resolved: resolved,
-                allResolved: previouslyResolved
+                allResolved: previouslyResolved,
+                stateName: stateDefinition.getName()
             });
 
             Ext.apply(viewConfig, me.transition.getAdditionalViewConfigOptions(pathNode, nodeIndex, this.keep, path));

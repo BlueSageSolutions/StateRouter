@@ -646,6 +646,48 @@ describe("Router", function() {
             });
         });
 
+        it("should set stateName property in controller", function () {
+            var aStateName,
+                bStateName,
+                aController;
+
+            aController = {
+                resolve: {
+                    ensureStateNameSet: function (resolve) {
+                        resolve(this.stateName);
+                    }
+                },
+                start: function () {
+                    aStateName = this.stateName;
+                }
+            };
+
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === 'a') {
+                        return aController;
+                    } else if (name === 'b') {
+                        return {
+                            start: function () {
+                                bStateName = this.stateName;
+                            }
+                        };
+                    }
+                    return null;
+                }});
+            router.state('a', {controller: 'a'});
+            router.state('a.b', {controller: 'b'});
+            router.go('a.b');
+
+            waits(1);
+
+            runs(function () {
+                expect(aStateName).toBe('a');
+                expect(aController.resolved.ensureStateNameSet).toBe('a');
+                expect(bStateName).toBe('a.b');
+            });
+        });
+
         it("should fire application level events if application configured", function () {
             var ready,
                 stateChanged = false,
@@ -1166,7 +1208,8 @@ describe("Router", function() {
                 config: {
                     params: null,
                     resolved: null,
-                    allResolved: null
+                    allResolved: null,
+                    stateName: null,
                 },
 
                 items: [{
@@ -1182,11 +1225,13 @@ describe("Router", function() {
                 myParams: null,
                 myResolved: null,
                 myAllResolved: null,
+                myStateName: null,
 
                 constructor: function (options) {
                     this.myParams = options.params;
                     this.myResolved = options.resolved;
                     this.myAllResolved = options.allResolved;
+                    this.myStateName = options.stateName;
                     this.callParent(arguments);
                 }
             });
@@ -1245,6 +1290,7 @@ describe("Router", function() {
                 expect(vp.down('mainview').getAllResolved()).not.toBeNull();
                 expect(vp.down('mainview').getAllResolved().state1.a).toBe('Hello');
                 expect(vp.down('mainview').getAllResolved().state1.b).toBe('World');
+                expect(vp.down('mainview').getStateName()).toBe('state1');
 
                 expect(vp.down('childview').myResolved).not.toBeUndefined();
                 expect(vp.down('childview').myResolved).not.toBeNull();
@@ -1254,6 +1300,7 @@ describe("Router", function() {
                 expect(vp.down('childview').myAllResolved.state1.a).toBe('Hello');
                 expect(vp.down('childview').myAllResolved.state1.b).toBe('World');
                 expect(vp.down('childview').myAllResolved['state1.child1'].a).toBe('Child');
+                expect(vp.down('childview').myStateName).toBe('state1.child1');
             });
         });
 
