@@ -176,11 +176,6 @@ Ext.define('StateRouter.staterouter.Router', {
         return this;
     },
 
-
-
-
-
-
     go: function (newStateName, stateParams, options) {
         var stateParameters = stateParams || {},
             opts = options || {};
