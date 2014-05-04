@@ -45,17 +45,16 @@ describe("Router", function() {
         // TODO: This test relies on internal implementation, refactor
         it("should allow you to specify name as first param or in config", function () {
 
-            // TODO: Config is required, is it really required?
-            router.state('state1', {});
-            expect(router.stateDefinitionMap.state1).not.toBeUndefined();
-            expect(router.stateDefinitionMap.state1).not.toBeNull();
+            router.state('state1');
+            expect(router.stateManager.getStateDefinition('state1')).not.toBeUndefined();
+            expect(router.stateManager.getStateDefinition('state1')).not.toBeNull();
 
             router.state({
                 name: 'state2'
             });
 
-            expect(router.stateDefinitionMap.state2).not.toBeUndefined();
-            expect(router.stateDefinitionMap.state2).not.toBeNull();
+            expect(router.stateManager.getStateDefinition('state2')).not.toBeUndefined();
+            expect(router.stateManager.getStateDefinition('state2')).not.toBeNull();
         });
 
         it("should call controllerProcessor if defined to obtain controller name", function () {
@@ -1301,6 +1300,16 @@ describe("Router", function() {
                 expect(vp.down('childview').myAllResolved.state1.b).toBe('World');
                 expect(vp.down('childview').myAllResolved['state1.child1'].a).toBe('Child');
                 expect(vp.down('childview').myStateName).toBe('state1.child1');
+
+                expect(vp.down('childview').resolved).not.toBeUndefined();
+                expect(vp.down('childview').resolved).not.toBeNull();
+                expect(vp.down('childview').resolved.a).toBe('Child');
+                expect(vp.down('childview').allResolved).not.toBeUndefined();
+                expect(vp.down('childview').allResolved).not.toBeNull();
+                expect(vp.down('childview').allResolved.state1.a).toBe('Hello');
+                expect(vp.down('childview').allResolved.state1.b).toBe('World');
+                expect(vp.down('childview').allResolved['state1.child1'].a).toBe('Child');
+                expect(vp.down('childview').stateName).toBe('state1.child1');
             });
         });
 
