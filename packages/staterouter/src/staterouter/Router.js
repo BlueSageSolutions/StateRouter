@@ -229,7 +229,18 @@ Ext.define('StateRouter.staterouter.Router', {
             combinedControllersPromise,
             viewTransitionPromise,
             resolveBeforeTransition = [],
-            transitionEvent;
+            transitionEvent,
+            reload = false;
+
+        if (options) {
+            reload = options.reload;
+
+            if (Ext.isString(reload)) {
+                if (!this.stateManager.hasStateDefinition(reload)) {
+                    throw 'Unknown reload state: ' + reload;
+                }
+            }
+        }
 
         if (!me.ready) {
             Ext.History.on('ready', function () {
@@ -272,7 +283,7 @@ Ext.define('StateRouter.staterouter.Router', {
         // the previous state so we do not have to stop/start controllers up to that
         // point.
         if (me.currentState !== null) {
-            if (me.toState.isEqual(me.currentState)) {
+            if (reload === false && me.toState.isEqual(me.currentState)) {
                 Ext.log('Asked to go to the same place');
                 return false;
             }
@@ -281,13 +292,19 @@ Ext.define('StateRouter.staterouter.Router', {
 
             fromPath = me.currentState.getPath();
 
-            // From the root until we've reached the end of the currentState or newState path
-            for (i = 0; i < toPath.length && i < fromPath.length; i++) {
+            if (reload !== true) {
+                // From the root until we've reached the end of the currentState or newState path
+                for (i = 0; i < toPath.length && i < fromPath.length; i++) {
 
-                if (toPath[i].isEqual(fromPath[i])) {
-                    keep++;
-                } else {
-                    break;
+                    if (Ext.isString(reload) && toPath[i].getDefinition().getName() === reload) {
+                        break;
+                    }
+
+                    if (toPath[i].isEqual(fromPath[i])) {
+                        keep++;
+                    } else {
+                        break;
+                    }
                 }
             }
 

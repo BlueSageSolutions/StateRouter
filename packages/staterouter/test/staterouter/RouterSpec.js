@@ -759,6 +759,141 @@ describe("Router", function() {
             });
         });
 
+        it("should all you to reload entire state even if equivalent params", function () {
+            var aStart = 0;
+            var bStart = 0;
+            var cStart = 0;
+
+            router.configure({controllerProvider: function (name) {
+                if (name === 'a') {
+                    return {
+                        start: function () {
+                            aStart++;
+                        }
+                    };
+                }
+                if (name === 'b') {
+                    return {
+                        start: function () {
+                            bStart++;
+                        }
+                    };
+                }
+                if (name === 'c') {
+                    return {
+                        start: function () {
+                            cStart++;
+                        }
+                    };
+                }
+                return {};
+            }});
+            router.state('a', {controller: 'a', params: ['aId']});
+            router.state('a.b', {controller: 'b', params: ['bId']});
+            router.state('a.b.c', {controller: 'c'});
+            router.go('a.b.c', {
+                aId: 'Hello',
+                bId: 'World'
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(aStart).toBe(1);
+                expect(bStart).toBe(1);
+                expect(cStart).toBe(1);
+
+                router.go('a.b.c', {
+                    aId: 'Hello',
+                    bId: 'World'
+                });
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(aStart).toBe(1);
+                expect(bStart).toBe(1);
+                expect(cStart).toBe(1);
+
+                router.go('a.b.c', {
+                    aId: 'Hello',
+                    bId: 'World'
+                }, {
+                    reload: true
+                });
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(aStart).toBe(2);
+                expect(bStart).toBe(2);
+                expect(cStart).toBe(2);
+            });
+        });
+
+        it("should all you to reload a state starting at some state even if equivalent params", function () {
+            var aStart = 0;
+            var bStart = 0;
+            var cStart = 0;
+
+            router.configure({controllerProvider: function (name) {
+                if (name === 'a') {
+                    return {
+                        start: function () {
+                            aStart++;
+                        }
+                    };
+                }
+                if (name === 'b') {
+                    return {
+                        start: function () {
+                            bStart++;
+                        }
+                    };
+                }
+                if (name === 'c') {
+                    return {
+                        start: function () {
+                            cStart++;
+                        }
+                    };
+                }
+                return {};
+            }});
+            router.state('a', {controller: 'a', params: ['aId']});
+            router.state('a.b', {controller: 'b', params: ['bId']});
+            router.state('a.b.c', {controller: 'c'});
+            router.go('a.b.c', {
+                aId: 'Hello',
+                bId: 'World'
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(aStart).toBe(1);
+                expect(bStart).toBe(1);
+                expect(cStart).toBe(1);
+
+                router.go('a.b.c', {
+                    aId: 'Hello',
+                    bId: 'World'
+                }, {
+                    reload: 'a.b'
+                });
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(aStart).toBe(1);
+                expect(bStart).toBe(2);
+                expect(cStart).toBe(2);
+            });
+        });
+
         it("should not pass child params to parent controllers", function () {
             var homeId,
                 homeId2,
