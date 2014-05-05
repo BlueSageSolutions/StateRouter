@@ -894,6 +894,58 @@ describe("Router", function() {
             });
         });
 
+        it("should all you to forcefully go to some state without notifying others and allowing them to cancel", function () {
+            router.configure({controllerProvider: function (name) {
+                if (name === 'a') {
+                    return {};
+                }
+                if (name === 'b') {
+                    return {};
+                }
+                if (name === 'c') {
+                    return {
+                        onStateRouterEvent: function (eventName, eventObj) {
+                            if (eventName === StateRouter.STATE_CHANGE_REQUEST) {
+                                return false;
+                            }
+                        }
+                    };
+                }
+                if (name === 'd') {
+                    return {};
+                }
+                return {};
+            }});
+            router.state('a', {controller: 'a', params: ['aId']});
+            router.state('a.b', {controller: 'b', params: ['bId']});
+            router.state('a.b.c', {controller: 'c'});
+            router.state('d', {controller: 'd'});
+            router.go('a.b.c', {
+                aId: 'Hello',
+                bId: 'World'
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState() === 'a.b.c');
+                router.go('d');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState() === 'a.b.c');
+                router.go('d', {}, {force: true});
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState() === 'd');
+            });
+        });
+
         it("should not pass child params to parent controllers", function () {
             var homeId,
                 homeId2,

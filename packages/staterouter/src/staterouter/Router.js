@@ -230,7 +230,8 @@ Ext.define('StateRouter.staterouter.Router', {
             viewTransitionPromise,
             resolveBeforeTransition = [],
             transitionEvent,
-            reload = false;
+            reload = false,
+            force = options && options.force === true;
 
         if (options) {
             reload = options.reload;
@@ -312,8 +313,8 @@ Ext.define('StateRouter.staterouter.Router', {
 
             me.copyResolveResultsToNewPath();
 
-            // Allow states to cancel state transition
-            if (!me.notifyAll(StateRouter.STATE_CHANGE_REQUEST, transitionEvent)) {
+            // Allow states to cancel state transition (unless we're forcefully going to this state)
+            if (force === false && !me.notifyAll(StateRouter.STATE_CHANGE_REQUEST, transitionEvent)) {
 
                 // Let running controllers know it was canceled
                 me.notifyAll(StateRouter.STATE_CHANGE_CANCELED, transitionEvent);
