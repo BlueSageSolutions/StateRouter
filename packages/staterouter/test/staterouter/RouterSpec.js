@@ -837,12 +837,18 @@ describe("Router", function() {
             var aStart = 0;
             var bStart = 0;
             var cStart = 0;
+            var aStop = 0;
+            var bStop = 0;
+            var cStop = 0;
 
             router.configure({controllerProvider: function (name) {
                 if (name === 'a') {
                     return {
                         start: function () {
                             aStart++;
+                        },
+                        stop: function () {
+                            aStop++;
                         }
                     };
                 }
@@ -850,6 +856,9 @@ describe("Router", function() {
                     return {
                         start: function () {
                             bStart++;
+                        },
+                        stop: function () {
+                            bStop++;
                         }
                     };
                 }
@@ -857,6 +866,9 @@ describe("Router", function() {
                     return {
                         start: function () {
                             cStart++;
+                        },
+                        stop: function () {
+                            cStop++;
                         }
                     };
                 }
@@ -876,6 +888,9 @@ describe("Router", function() {
                 expect(aStart).toBe(1);
                 expect(bStart).toBe(1);
                 expect(cStart).toBe(1);
+                expect(aStop).toBe(0);
+                expect(bStop).toBe(0);
+                expect(cStop).toBe(0);
 
                 router.go('a.b.c', {
                     aId: 'Hello',
@@ -891,6 +906,9 @@ describe("Router", function() {
                 expect(aStart).toBe(1);
                 expect(bStart).toBe(2);
                 expect(cStart).toBe(2);
+                expect(aStop).toBe(0);
+                expect(bStop).toBe(1);
+                expect(cStop).toBe(1);
             });
         });
 

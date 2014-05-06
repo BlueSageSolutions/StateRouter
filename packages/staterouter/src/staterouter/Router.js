@@ -29,6 +29,8 @@ Ext.define('StateRouter.staterouter.Router', {
     transitioning: false,
     ready: true,
     historyInitialized: false,
+    stateToViewId: null,
+    stateToRouterViewId: null,
 
     constructor: function () {
         var me = this;
@@ -42,6 +44,8 @@ Ext.define('StateRouter.staterouter.Router', {
         me.startFnName = 'start';
         me.stopFnName = 'stop';
         me.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
+        me.stateToViewId = {};
+        me.stateToRouterViewId = {};
     },
 
     configure: function (config) {
@@ -224,8 +228,6 @@ Ext.define('StateRouter.staterouter.Router', {
         var me = this,
             toPath,
             fromPath,
-            keep = 0,
-            i,
             combinedControllersPromise,
             viewTransitionPromise,
             resolveBeforeTransition = [],
@@ -289,29 +291,11 @@ Ext.define('StateRouter.staterouter.Router', {
                 return false;
             }
 
-            transitionEvent.fromState = me.currentState.getDefinitionName();
-
-            fromPath = me.currentState.getPath();
-
-            if (reload !== true) {
-                // From the root until we've reached the end of the currentState or newState path
-                for (i = 0; i < toPath.length && i < fromPath.length; i++) {
-
-                    if (Ext.isString(reload) && toPath[i].getDefinition().getName() === reload) {
-                        break;
-                    }
-
-                    if (toPath[i].isEqual(fromPath[i])) {
-                        keep++;
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            me.keep = keep;
+            this.calculateKeepPoint(reload);
 
             me.copyResolveResultsToNewPath();
+
+            transitionEvent.fromState = me.currentState.getDefinitionName();
 
             // Allow states to cancel state transition (unless we're forcefully going to this state)
             if (force === false && !me.notifyAll(StateRouter.STATE_CHANGE_REQUEST, transitionEvent)) {
@@ -338,11 +322,11 @@ Ext.define('StateRouter.staterouter.Router', {
         // For instance, going directly into a child view.
         if (me.currentState !== null &&
             me.toState.getPathNode().getDefinition().getView() &&
-            keep < me.currentState.getPath().length) {
+            me.keep < me.currentState.getPath().length) {
 
             // The "old" view in this case is the first view discarded.
             viewTransitionPromise = me.transition.transitionFrom(
-                Ext.ComponentManager.get(fromPath[keep].getDefinition().viewComponentId),
+                Ext.ComponentManager.get(me.stateToViewId[me.toState.getPath()[me.keep].getDefinition()]),
                 combinedControllersPromise
             );
 
@@ -395,6 +379,34 @@ Ext.define('StateRouter.staterouter.Router', {
         });
 
         return true;
+    },
+
+    calculateKeepPoint: function (reload) {
+        var fromPath = this.currentState.getPath();
+        var toPath = this.toState.getPath();
+        var i;
+        var keep = 0;
+        var reloadFromState;
+
+        if (reload !== true) {
+            reloadFromState = Ext.isString(reload);
+
+            // From the root until we've reached the end of the currentState or newState path
+            for (i = 0; i < toPath.length && i < fromPath.length; i++) {
+
+                if (reloadFromState && toPath[i].getDefinition().getName() === reload) {
+                    break;
+                }
+
+                if (toPath[i].isEqual(fromPath[i])) {
+                    keep++;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        this.keep = keep;
     },
 
     updateAddressBar: function (state) {
@@ -848,12 +860,7 @@ Ext.define('StateRouter.staterouter.Router', {
             //
             // It's of no help as the ID is only known when the component
             // is instantiated.
-            //
-            // As a bit of a hack, this id was inserted into its own
-            // StateDefinition when this parent was originally created.
-            //
-            // See the code that follows.
-            return stateDefinition.getParent().nestedViewComponentId;
+            return this.stateToRouterViewId[stateDefinition.getParent().getName()];
         } else {
             // If no parent, we use the root
             return this.rootComponentId;
@@ -908,21 +915,21 @@ Ext.define('StateRouter.staterouter.Router', {
 
             me.transition.transitionTo(viewComponent, pathNode, nodeIndex, this.keep, path);
 
-            stateDefinition.viewComponentId = viewComponent.getId();
+            me.stateToViewId[stateDefinition.getName()] = viewComponent.getId();
 
             // This view may be an ancestor of other views.  Either the entire
             // view will be swapped out or it will have a child which will act
-            // as the container for nested chidlren.
+            // as the container for nested children.
             //
             // We store the ID of this wrapping container into the
             // StateDefinition - a bit of a hack.
             if (viewComponent.routerView) {
-                stateDefinition.nestedViewComponentId = viewComponent.getId();
+                me.stateToRouterViewId[stateDefinition.getName()] = viewComponent.getId();
             } else {
                 nestedComponent = viewComponent.down('container[routerView]');
 
                 if (nestedComponent) {
-                    stateDefinition.nestedViewComponentId = nestedComponent.getId();
+                    me.stateToRouterViewId[stateDefinition.getName()] = nestedComponent.getId();
                 }
                 // TODO: Throw error here if this state is not a leaf and no child area defined
 
