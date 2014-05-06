@@ -581,14 +581,16 @@ describe("Router", function() {
             router.configure({controllerProvider: function (name) {
                 if (name === 'Old') {
                     return {
-                        stop: function () {
+                        stop: function (resolve, reject) {
                             value = 'Hello';
+                            resolve();
                         }
                     };
                 } else if (name === 'New') {
                     return {
-                        stop: function () {
+                        stop: function (resolve) {
                             value = 'World';
+                            resolve();
                         }
                     };
                 }
@@ -609,6 +611,7 @@ describe("Router", function() {
             runs(function () {
                 expect(value).not.toBe('World');
                 expect(value).toBe('Hello');
+                expect(router.getCurrentState()).toBe('new');
             });
         });
 
@@ -844,31 +847,37 @@ describe("Router", function() {
             router.configure({controllerProvider: function (name) {
                 if (name === 'a') {
                     return {
+                        name: 'a',
                         start: function () {
                             aStart++;
                         },
-                        stop: function () {
+                        stop: function (resolve, reject) {
                             aStop++;
+                            resolve();
                         }
                     };
                 }
                 if (name === 'b') {
                     return {
+                        name: 'b',
                         start: function () {
                             bStart++;
                         },
-                        stop: function () {
+                        stop: function (resolve, reject) {
                             bStop++;
+                            resolve();
                         }
                     };
                 }
                 if (name === 'c') {
                     return {
+                        name: 'c',
                         start: function () {
                             cStart++;
                         },
-                        stop: function () {
+                        stop: function (resolve, reject) {
                             cStop++;
+                            resolve();
                         }
                     };
                 }

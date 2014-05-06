@@ -313,8 +313,17 @@ Ext.define('StateRouter.staterouter.Router', {
             me.updateAddressBar(me.toState);
         }
 
+        // We're starting the transition
+
+        // 1. Transition away view (animation such as fading out)
+        // 1a. In parallel, stop the discarded states
+        // 1b. Once discarded states stopped, then start loading resolvables
+
+        // 2. Once transition animation and resolvables complete, then start new states
+
+
         // Resolve all resolvable items in all controllers before entering new state
-        combinedControllersPromise = me.resolveAllAndForwardIfNecessary();
+        combinedControllersPromise = me.createStopAndResolvePromise();
         resolveBeforeTransition.push(combinedControllersPromise);
 
         // If we have an old state and the new state has a view, we may need to
@@ -326,7 +335,7 @@ Ext.define('StateRouter.staterouter.Router', {
 
             // The "old" view in this case is the first view discarded.
             viewTransitionPromise = me.transition.transitionFrom(
-                Ext.ComponentManager.get(me.stateToViewId[me.toState.getPath()[me.keep].getDefinition()]),
+                Ext.ComponentManager.get(me.stateToViewId[me.currentState.getPath()[me.keep].getDefinition().getName()]),
                 combinedControllersPromise
             );
 
@@ -350,9 +359,6 @@ Ext.define('StateRouter.staterouter.Router', {
 
                 // the results array includes SequentialPromiseResolver results and the transition results
                 me.saveResolveResults(results[0]);
-
-                // No one canceled state transition, proceed to exit controllers we're not keeping
-                me.stopDiscardedControllers();
 
                 // Enter the new controllers
                 me.startNewControllers();
@@ -613,25 +619,50 @@ Ext.define('StateRouter.staterouter.Router', {
         return;
     },
 
+    createStopAndResolvePromise: function () {
+        var me = this;
+        var promise = this.stopDiscardedControllers().then(function () {
+            return me.resolveAllAndForwardIfNecessary();
+        });
+        return promise;
+    },
+
     stopDiscardedControllers: function () {
         var me = this,
             i,
             fromPath,
             stateDefinition,
-            controller;
+            controller,
+            r;
+
+        function chainStopPromise(theController) {
+            r = r.then(function () {
+                return new RSVP.Promise(function (resolve, reject) {
+                    Ext.callback(theController[me.stopFnName], theController, [resolve, reject]);
+                });
+            });
+        }
+
+        r = new RSVP.Promise(function (resolve) { resolve(); });
 
         if (me.currentState !== null) {
             fromPath = me.currentState.getPath();
 
-            for (i = this.keep; i < fromPath.length; i++) {
+            // Stop in reverse order
+            for (i = fromPath.length - 1; i >= this.keep; i--) {
                 stateDefinition = fromPath[i].getDefinition();
 
                 if (stateDefinition.getController()) {
                     controller = me.getController(stateDefinition.getController());
-                    Ext.callback(controller[me.stopFnName], controller);
+
+                    if (Ext.isFunction(controller[me.stopFnName])) {
+                        chainStopPromise(controller);
+                    }
                 }
             }
         }
+
+        return r;
     },
 
     /**
