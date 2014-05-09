@@ -227,7 +227,6 @@ Ext.define('StateRouter.staterouter.Router', {
     transitionTo: function (newStateName, stateParams, options) {
         var me = this,
             toPath,
-            fromPath,
             combinedControllersPromise,
             viewTransitionPromise,
             resolveBeforeTransition = [],
@@ -278,8 +277,11 @@ Ext.define('StateRouter.staterouter.Router', {
             params: stateParams,
             options: options,
             toState: newStateName,
-            fromState: null
+            fromState: null,
+            fromParams: null
         };
+
+        me.keep = 0;
 
         // Next, iterate through the current path to see which PathNodes we can keep.
         // keep in this context means the path up to the "keep" point is identical to
@@ -296,6 +298,7 @@ Ext.define('StateRouter.staterouter.Router', {
             me.copyResolveResultsToNewPath();
 
             transitionEvent.fromState = me.currentState.getDefinitionName();
+            transitionEvent.fromParams = me.getCurrentStateParams();
 
             // Allow states to cancel state transition (unless we're forcefully going to this state)
             if (force === false && !me.notifyAll(StateRouter.STATE_CHANGE_REQUEST, transitionEvent)) {
@@ -307,6 +310,8 @@ Ext.define('StateRouter.staterouter.Router', {
 
             me.transitioning = true;
             me.notifyAll(StateRouter.STATE_CHANGE_TRANSITIONING, transitionEvent);
+        } else {
+            me.transitioning = true;
         }
 
         if (!me.isLastNodeForwarding()) {
@@ -378,10 +383,12 @@ Ext.define('StateRouter.staterouter.Router', {
                 me.notifyAncestors(StateRouter.STATE_CHANGED, transitionEvent);
             }
         }, function (error) {
-            me.updateAddressBar(me.currentState);
+            var errorEvent = Ext.apply({ error: error}, transitionEvent);
+            window.location.hash = '';
             me.transitioning = false;
-            me.notifyAll(StateRouter.STATE_CHANGE_FAILED, Ext.apply({ error: error}, transitionEvent));
-            Ext.callback(me.errorHandler, me, [error]);
+            me.notifyAll(StateRouter.STATE_CHANGE_FAILED, errorEvent);
+            me.currentState = null;
+            Ext.callback(me.errorHandler, me, [errorEvent]);
         });
 
         return true;

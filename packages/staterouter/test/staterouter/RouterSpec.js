@@ -381,7 +381,7 @@ describe("Router", function() {
             waits(1);
 
             runs(function () {
-                expect(router.getCurrentState()).toBe('state1');
+                expect(router.getCurrentState()).toBe(null);
                 expect(errorObj).not.toBeUndefined();
                 expect(errorObj.fromState).toBe('state1');
                 expect(errorObj.toState).toBe('state2');
@@ -432,7 +432,7 @@ describe("Router", function() {
             waits(1);
 
             runs(function () {
-                expect(router.getCurrentState()).toBe('state1');
+                expect(router.getCurrentState()).toBe(null);
                 expect(errorObj).not.toBeUndefined();
                 expect(errorObj.fromState).toBe('state1');
                 expect(errorObj.toState).toBe('state2');
