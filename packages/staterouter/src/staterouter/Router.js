@@ -232,7 +232,7 @@ Ext.define('StateRouter.staterouter.Router', {
             resolveBeforeTransition = [],
             transitionEvent,
             reload = false,
-            force = options && options.force === true;
+            force = Ext.isObject(options) && options.force === true;
 
         if (options) {
             reload = options.reload;
