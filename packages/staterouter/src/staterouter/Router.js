@@ -274,9 +274,9 @@ Ext.define('StateRouter.staterouter.Router', {
         });
 
         transitionEvent = {
-            params: stateParams,
             options: options,
             toState: newStateName,
+            toParams: stateParams,
             fromState: null,
             fromParams: null
         };
@@ -940,7 +940,7 @@ Ext.define('StateRouter.staterouter.Router', {
             parentComponent.removeAll();
 
             Ext.apply(viewConfig, {
-                params: allParams,
+                toParams: allParams,
                 resolved: resolved,
                 allResolved: previouslyResolved,
                 stateName: stateDefinition.getName()
