@@ -5,6 +5,8 @@ Ext.define('StateRouter.staterouter.StateManager', {
     },
 
     states: null,
+    controllerProvider: null,
+    controllerProcessor: null,
 
     constructor: function (config) {
         this.states = {};
@@ -125,5 +127,38 @@ Ext.define('StateRouter.staterouter.StateManager', {
 
             this.fireEvent('stateunregistered', stateName);
         }
+    },
+
+    getControllerForPathNode: function (pathNode) {
+        return this.getControllerForState(pathNode.getDefinition());
+    },
+
+    getControllerForState: function (state) {
+        var stateDef = state;
+
+        if (Ext.isString(state)) {
+            stateDef = this.getStateDefinition(state);
+        }
+
+        return this.lookupController(stateDef.getController());
+    },
+
+    lookupController: function (name) {
+        // TODO: Should use the stateViewManager to pass to controllerProvider for ExtJS 5
+        var controllerName = name;
+
+        if (!controllerName) {
+            return null;
+        }
+
+        if (!this.controllerProvider) {
+            throw new Error("Cannot resolve controller '" + controllerName + "'. controllerProvider undefined");
+        }
+
+        if (this.controllerProcessor) {
+            controllerName = this.controllerProcessor(controllerName);
+        }
+
+        return this.controllerProvider(controllerName);
     }
 });

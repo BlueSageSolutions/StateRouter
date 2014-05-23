@@ -1,9 +1,10 @@
 Ext.define('StateRouter.staterouter.Router', {
     requires: [
         'Ext.util.History',
-        'StateRouter.staterouter.SequentialPromiseResolver',
+        'StateRouter.staterouter.PathPromiseResolver',
         'StateRouter.staterouter.State',
         'StateRouter.staterouter.StateManager',
+        'StateRouter.staterouter.StateViewManager',
         'StateRouter.staterouter.transitions.FadeTransition',
         'StateRouter.staterouter.transitions.BaseViewTransition',
         'StateRouter.staterouter.UrlParser'
@@ -13,11 +14,10 @@ Ext.define('StateRouter.staterouter.Router', {
 
     // Created once during Router setup
     stateManager: null,
+    stateViewManager: null,
+    promiseResolver: null,
 
     // Configurable properties
-    rootComponentId: null,
-    controllerProviderFn: null,
-    controllerProcessorFn: null,
     viewProcessorFn: null,
     startFnName: null,
     stopFnName: null,
@@ -29,23 +29,26 @@ Ext.define('StateRouter.staterouter.Router', {
     transitioning: false,
     ready: true,
     historyInitialized: false,
-    stateToViewId: null,
-    stateToRouterViewId: null,
 
     constructor: function () {
         var me = this;
+
+
+        me.stateViewManager = Ext.create('StateRouter.staterouter.StateViewManager');
+
         me.stateManager = Ext.create('StateRouter.staterouter.StateManager', {
             listeners: {
                 stateregistered: Ext.bind(me.onStateRegistered, me)
             }
         });
 
+        me.promiseResolver = Ext.create('StateRouter.staterouter.PathPromiseResolver');
+        me.promiseResolver.stateManager = me.stateManager;
+
         me.keep = 0;
         me.startFnName = 'start';
         me.stopFnName = 'stop';
         me.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
-        me.stateToViewId = {};
-        me.stateToRouterViewId = {};
     },
 
     configure: function (config) {
@@ -53,19 +56,22 @@ Ext.define('StateRouter.staterouter.Router', {
         me.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
         if (config) {
             if (config.hasOwnProperty('root')) {
-                me.rootComponentId = config.root;
+                me.stateViewManager.rootComponentId = config.root;
             }
 
             if (config.hasOwnProperty('app')) {
                 me.app = config.app;
+                me.stateManager.controllerProvider = function (name) {
+                    return me.app.getController(name);
+                };
             }
 
             if (config.hasOwnProperty('controllerProvider')) {
-                me.controllerProviderFn = config.controllerProvider;
+                me.stateManager.controllerProvider = config.controllerProvider;
             }
 
             if (config.hasOwnProperty('controllerProcessor')) {
-                me.controllerProcessorFn = config.controllerProcessor;
+                me.stateManager.controllerProcessor = config.controllerProcessor;
             }
 
             if (config.hasOwnProperty('viewProcessor')) {
@@ -159,21 +165,6 @@ Ext.define('StateRouter.staterouter.Router', {
             Ext.callback(noHistoryTokenCallback, me);
         }
     },
-
-    getController: function (name) {
-        var controllerName = name;
-
-        if (!this.controllerProviderFn) {
-            throw new Error("Cannot resolve controller '" + name + "'. controllerProviderFn undefined");
-        }
-
-        if (this.controllerProcessorFn) {
-            controllerName = this.controllerProcessorFn(name);
-        }
-
-        return this.controllerProviderFn(controllerName);
-    },
-
 
     state: function (configOrName, optConfig) {
         this.stateManager.register(configOrName, optConfig);
@@ -340,7 +331,7 @@ Ext.define('StateRouter.staterouter.Router', {
 
             // The "old" view in this case is the first view discarded.
             viewTransitionPromise = me.transition.transitionFrom(
-                Ext.ComponentManager.get(me.stateToViewId[me.currentState.getPath()[me.keep].getDefinition().getName()]),
+                me.stateViewManager.findView(me.currentState.getPath()[me.keep].getDefinition()),
                 combinedControllersPromise
             );
 
@@ -349,7 +340,7 @@ Ext.define('StateRouter.staterouter.Router', {
             }
         }
 
-        RSVP.all(resolveBeforeTransition).then(function (results) {
+        RSVP.all(resolveBeforeTransition).then(function () {
 
             // This has to be wrapped in a promise, otherwise
             // exceptions are being eaten by RSVP
@@ -359,11 +350,6 @@ Ext.define('StateRouter.staterouter.Router', {
                 // state is until the the resolvables are resolved, we only know the final
                 // state at this point (when forwardToChild)
                 transitionEvent.toState = me.toState.getDefinitionName();
-
-                // TODO: currentState should possibly be set to null, but it's used by stopDiscardedControllers
-
-                // the results array includes SequentialPromiseResolver results and the transition results
-                me.saveResolveResults(results[0]);
 
                 // Enter the new controllers
                 me.startNewControllers();
@@ -375,7 +361,7 @@ Ext.define('StateRouter.staterouter.Router', {
             me.transitioning = false;
 
             // If we've kept everything, then it means we navigated to some parent state
-            // we must notify the last node to it knows to update its UI
+            // we must notify the last node so it knows to update its UI
             if (me.keep === me.currentState.getPath().length) {
                 me.notifyAll(StateRouter.STATE_CHANGED, transitionEvent);
             } else {
@@ -587,7 +573,6 @@ Ext.define('StateRouter.staterouter.Router', {
             i,
             pathArray,
             result,
-            stateDefinition,
             controller,
             controllerKept;
 
@@ -595,18 +580,14 @@ Ext.define('StateRouter.staterouter.Router', {
             pathArray = path || this.currentState.getPath();
 
             for (i = startIndex; i < endIndex; i++) {
-                stateDefinition = pathArray[i].getDefinition();
+                controller = this.stateManager.getControllerForPathNode(pathArray[i]);
 
-                if (stateDefinition.getController()) {
-                    controller = this.getController(stateDefinition.getController());
+                if (controller && controller.onStateRouterEvent) {
+                    controllerKept = (i < this.keep);
+                    result = controller.onStateRouterEvent(eventName, eventObj, controllerKept);
 
-                    if (controller.onStateRouterEvent) {
-                        controllerKept = (i < this.keep);
-                        result = controller.onStateRouterEvent(eventName, eventObj, controllerKept);
-
-                        if (result === false) {
-                            canceled = true;
-                        }
+                    if (result === false) {
+                        canceled = true;
                     }
                 }
             }
@@ -638,7 +619,6 @@ Ext.define('StateRouter.staterouter.Router', {
         var me = this,
             i,
             fromPath,
-            stateDefinition,
             controller,
             r;
 
@@ -657,70 +637,15 @@ Ext.define('StateRouter.staterouter.Router', {
 
             // Stop in reverse order
             for (i = fromPath.length - 1; i >= this.keep; i--) {
-                stateDefinition = fromPath[i].getDefinition();
+                controller = me.stateManager.getControllerForPathNode(fromPath[i]);
 
-                if (stateDefinition.getController()) {
-                    controller = me.getController(stateDefinition.getController());
-
-                    if (Ext.isFunction(controller[me.stopFnName])) {
-                        chainStopPromise(controller);
-                    }
+                if (controller && Ext.isFunction(controller[me.stopFnName])) {
+                    chainStopPromise(controller);
                 }
             }
         }
 
         return r;
-    },
-
-    /**
-     * Given an input in the format:
-     *
-     * {
-     *    stateName: {
-     *       resolveA: 'Hello',
-     *       resolveB: 'World',
-     *    },
-     *    anotherStateName: {
-     *       resolveA: 'ExtJS',
-     *       anyNameIsOK: 'Sencha',
-     *    }
-     * }
-     *
-     * It will store the results both in the node and in the controller
-     * "resolved" and "allResolved" properties.
-     *
-     * @param results
-     */
-    saveResolveResults: function (results) {
-        var toPath = this.toState.getPath(),
-            pathNode,
-            stateDefinition,
-            stateName,
-            allResultsUpToThisNode = {},
-            nodeResults,
-            controller,
-            i;
-
-        for (i = 0; i < toPath.length; i++) {
-            pathNode = toPath[i];
-            stateDefinition = pathNode.getDefinition();
-            stateName = stateDefinition.getName();
-            nodeResults = Ext.apply({}, results[stateName]);
-            allResultsUpToThisNode[stateName] = nodeResults;
-
-            pathNode.resolved = nodeResults;
-            // make a copy otherwise this object will include all results
-            pathNode.allResolved = Ext.apply({}, allResultsUpToThisNode);
-
-            if (stateDefinition.getController()) {
-                controller = this.getController(stateDefinition.getController());
-
-                if (controller) {
-                    controller.resolved = pathNode.resolved;
-                    controller.allResolved = pathNode.allResolved;
-                }
-            }
-        }
     },
 
     /**
@@ -743,70 +668,23 @@ Ext.define('StateRouter.staterouter.Router', {
     resolveAllAndForwardIfNecessary: function () {
         var me = this,
             toPath = this.toState.getPath(),
-            nodesToResolve = this.toState.getPath().slice(this.keep),
-            input = me.createInputForSequentialPromiseResolver(nodesToResolve),
-            previousResults = {},
-            childInput,
             resolveAllPromise;
 
-        if (this.keep > 0) {
-            previousResults = toPath[this.keep - 1].allResolved;
-        }
+        resolveAllPromise = me.promiseResolver.createResolvePromise(toPath, this.keep);
 
-        resolveAllPromise = StateRouter.staterouter.SequentialPromiseResolver.resolve(input, previousResults);
-
-        // If the last node forwards to a child, then we want to figure out
-        // which child it's forwarding to, and possibly chain another promise
-        // to the resolve chain.
+        // If the last node forwards to a child, then we want to append the child state
+        // to the path and chain one final promise to resolve the forwarded controller's dependencies
         if (this.isLastNodeForwarding()) {
 
-            resolveAllPromise = resolveAllPromise.then(function (results) {
-                // A little overhead, we're saving the results twice... once now and once when it returns
-                me.saveResolveResults(results);
-
+            resolveAllPromise = resolveAllPromise.then(function () {
                 me.appendForwardedNode();
-
                 me.updateAddressBar(me.toState);
 
-                childInput = me.createInputForSequentialPromiseResolver([toPath[toPath.length - 1]]);
-                return StateRouter.staterouter.SequentialPromiseResolver.resolve(childInput, results);
+                return me.promiseResolver.createResolvePromise(toPath, toPath.length - 1);
             });
         }
 
         return resolveAllPromise;
-    },
-
-    createInputForSequentialPromiseResolver: function (pathNodeArr) {
-        var nodeObjsArr = [],
-            pathNode,
-            i,
-            stateDefinition,
-            controllerName,
-            controller,
-            nodeObj;
-
-        for (i = 0; i < pathNodeArr.length; i++) {
-            pathNode = pathNodeArr[i];
-            stateDefinition = pathNode.getDefinition();
-            controllerName = stateDefinition.getController();
-            nodeObj = {
-                pathNode: pathNode
-            };
-
-            if (controllerName) {
-                controller = this.getController(controllerName);
-                controller.stateName = stateDefinition.getName();
-
-                if (controller && controller.resolve) {
-                    nodeObj.resolve = controller.resolve;
-                    nodeObj.scope = controller;
-                }
-            }
-
-            nodeObjsArr.push(nodeObj);
-        }
-
-        return nodeObjsArr;
     },
 
     isLastNodeForwarding: function () {
@@ -855,7 +733,8 @@ Ext.define('StateRouter.staterouter.Router', {
             i,
             pathNode,
             stateDefinition,
-            controllerName;
+            controllerName,
+            controller;
 
         for (i = this.keep; i < toPath.length; i++) {
             pathNode = toPath[i];
@@ -875,35 +754,13 @@ Ext.define('StateRouter.staterouter.Router', {
 
             // Get the controller and call its start method
             if (controllerName) {
-                var controller = me.getController(controllerName);
+                controller = me.stateManager.lookupController(controllerName);
                 controller.stateName = stateDefinition.getName();
-
                 Ext.callback(controller[me.startFnName], controller, [pathNode.getAllParams(), stateDefinition.getName()]);
             }
         }
     },
 
-    /**
-     * Gets the parent component's DOM ID for this stateDefinition.
-     *
-     * If this state definition has no parent, it returns the root component ID.
-     *
-     * @param stateDefinition
-     * @returns {*}
-     */
-    getParentComponentId: function (stateDefinition) {
-        if (stateDefinition.getParent()) {
-            // We need the Component.id of the parent but we only have the
-            // class name defined in the parent's state definition.
-            //
-            // It's of no help as the ID is only known when the component
-            // is instantiated.
-            return this.stateToRouterViewId[stateDefinition.getParent().getName()];
-        } else {
-            // If no parent, we use the root
-            return this.rootComponentId;
-        }
-    },
 
     // TODO: This should really notify the caller when the view is rendered in case of animations
     // TODO: OR THE ANIMATION CAN NOTIFY CONTROLLERS SO start LOGIC CAN STILL PROCEED
@@ -915,8 +772,6 @@ Ext.define('StateRouter.staterouter.Router', {
             previouslyResolved = pathNode.allResolved,
             viewClass = stateDefinition.getView(),
             viewComponent,
-            nestedComponent,
-            parentComponentId,
             parentComponent,
             viewConfig = {};
 
@@ -924,8 +779,6 @@ Ext.define('StateRouter.staterouter.Router', {
         // to swap into the parent.  Instead, the dialog can be created in
         // the start method.  So we don't need to do anything here.
         if (viewClass) {
-            parentComponentId = this.getParentComponentId(stateDefinition);
-
             // If the view is actually a function, we need to execute it to determine the actual view class
             if (Ext.isFunction(stateDefinition.getView())) {
                 viewClass = stateDefinition.getView()(allParams, resolved, previouslyResolved);
@@ -936,7 +789,7 @@ Ext.define('StateRouter.staterouter.Router', {
             }
 
             // First, remove all items from the parent component.
-            parentComponent = Ext.getCmp(parentComponentId);
+            parentComponent = me.stateViewManager.findContainerToInsertChild(stateDefinition);
             parentComponent.removeAll();
 
             Ext.apply(viewConfig, {
@@ -953,25 +806,7 @@ Ext.define('StateRouter.staterouter.Router', {
 
             me.transition.transitionTo(viewComponent, pathNode, nodeIndex, this.keep, path);
 
-            me.stateToViewId[stateDefinition.getName()] = viewComponent.getId();
-
-            // This view may be an ancestor of other views.  Either the entire
-            // view will be swapped out or it will have a child which will act
-            // as the container for nested children.
-            //
-            // We store the ID of this wrapping container into the
-            // StateDefinition - a bit of a hack.
-            if (viewComponent.routerView) {
-                me.stateToRouterViewId[stateDefinition.getName()] = viewComponent.getId();
-            } else {
-                nestedComponent = viewComponent.down('container[routerView]');
-
-                if (nestedComponent) {
-                    me.stateToRouterViewId[stateDefinition.getName()] = nestedComponent.getId();
-                }
-                // TODO: Throw error here if this state is not a leaf and no child area defined
-
-            }
+            me.stateViewManager.register(stateDefinition.getName(), viewComponent);
         }
     }
 },
