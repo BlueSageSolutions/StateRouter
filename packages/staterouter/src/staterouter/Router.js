@@ -699,10 +699,18 @@ Ext.define('StateRouter.staterouter.Router', {
             currentLastNodeDef = currentLastNode.getDefinition(),
             forwardedStateName,
             forwardedStateDef,
-            ownParams,
+            ownParams = {},
             allParams;
 
         forwardedStateName = currentLastNodeDef.getForwardToChild()(currentLastNode.getAllParams(), currentLastNode.resolved, currentLastNode.allResolved);
+
+        if (Ext.isObject(forwardedStateName)) {
+            if (Ext.isObject(forwardedStateName.stateParams)) {
+                ownParams = forwardedStateName.stateParams;
+            }
+
+            forwardedStateName = forwardedStateName.stateName;
+        }
 
         if (!StateRouter.isChild(currentLastNodeDef.getName(), forwardedStateName)) {
             throw new Error('Forwarded state "' + forwardedStateName + '" not a child of "' + currentLastNodeDef.getName() + '"');
@@ -715,14 +723,17 @@ Ext.define('StateRouter.staterouter.Router', {
         }
 
         // Copy only the parameters defined in the StateDefinition
-        ownParams = Ext.copyTo({}, this.toState.getAllParams(), forwardedStateDef.getParams());
+        ownParams = Ext.copyTo({}, ownParams, forwardedStateDef.getParams());
         allParams = Ext.apply({}, currentLastNode.getAllParams());
+        allParams = Ext.applyIf(allParams, ownParams);
 
         var node = Ext.create('StateRouter.staterouter.PathNode', {
             definition: forwardedStateDef,
             ownParams: ownParams,
-            allParams: Ext.applyIf(allParams, ownParams)
+            allParams: allParams
         });
+
+        this.toState.setAllParams(allParams);
 
         toPath.push(node);
     },

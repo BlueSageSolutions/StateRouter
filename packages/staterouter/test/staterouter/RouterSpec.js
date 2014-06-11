@@ -1270,6 +1270,71 @@ describe("Router", function() {
                 });
             });
         });
+
+        it("should alllow forwardToChild to return additional parameters for forwarded child", function () {
+            var bParams;
+            var cParams;
+
+            router.configure({controllerProvider: function (name) {
+                if (name === 'a') {
+                    return {};
+                }
+                if (name === 'b') {
+                    return {
+                        start: function (stateParams) {
+                            bParams = stateParams;
+                        }
+                    };
+                }
+                if (name === 'b.c') {
+                    return {
+                        start: function (stateParams) {
+                            cParams = stateParams;
+                        }
+                    };
+                }
+                return {};
+            }});
+            router.state('a', {
+                controller: 'a'
+            }).state('b', {
+                controller: 'b',
+                params: ['bId'],
+                forwardToChild: function (params, resolved) {
+                    return {
+                        stateName: 'b.c',
+                        stateParams: {
+                            cId: 555,
+                            notACParams: 666
+                        }
+                    };
+                }
+            }).state('b.c', {
+                controller: 'b.c',
+                params: ['cId']
+            });
+
+            router.go('b', {
+                bId: 444
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('b.c');
+                expect(router.getCurrentStateParams()).toEqual({
+                    bId: 444,
+                    cId: 555
+                });
+                expect(bParams).toEqual({
+                    bId: 444
+                });
+                expect(cParams).toEqual({
+                    bId: 444,
+                    cId: 555
+                });
+            });
+        });
     });
 
     describe("Resolve", function() {
@@ -1526,6 +1591,8 @@ describe("Router", function() {
                 expect(vp.down('childview').stateName).toBe('state1.child1');
             });
         });
+
+
 
         it("should pass resolved to forwardToChild method", function () {
             var controller1 = {
