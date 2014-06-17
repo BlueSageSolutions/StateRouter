@@ -9,7 +9,9 @@ Ext.define('StateRouter.staterouter.StateDefinition', {
         url: null,
         absoluteUrl: null,
         absoluteUrlRegex: null,
-        params: [],
+        params: [], // all params
+        urlParams: [], // URL positioned params
+        queryParams: [], // query params
         conditions: {}
     },
 

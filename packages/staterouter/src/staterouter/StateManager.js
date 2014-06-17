@@ -7,6 +7,7 @@ Ext.define('StateRouter.staterouter.StateManager', {
     states: null,
     controllerProvider: null,
     controllerProcessor: null,
+    urlParser: null,
 
     constructor: function (config) {
         this.states = {};
@@ -16,6 +17,8 @@ Ext.define('StateRouter.staterouter.StateManager', {
             'stateregistered',
             'stateunregistered'
         );
+
+        this.urlParser = Ext.create('StateRouter.staterouter.UrlParser');
     },
 
     each: function (fn, scope) {
@@ -36,8 +39,8 @@ Ext.define('StateRouter.staterouter.StateManager', {
             newStateDefinition,
             parentStateName,
             lastPeriodIndex,
-            urlParser,
-            urlParserResult;
+            urlParserResult,
+            splitUrlResult;
 
         if (Ext.isObject(configOrName)) {
             newStateConfig = configOrName;
@@ -75,18 +78,35 @@ Ext.define('StateRouter.staterouter.StateManager', {
             // all parents which have params must provide URLs
             me.verifyAllParentsNavigable(newStateDefinition);
 
-            newStateDefinition.setAbsoluteUrl(newStateDefinition.getUrl());
+            // First, split the URL into its base and query parts
+            // /abc/:param?a&b
+            //
+            // becomes...
+            // {
+            //    baseUrl: /abc/:param
+            //    queryParams: ['a', 'b']
+            // }
+            splitUrlResult = this.urlParser.splitUrl(newStateDefinition.getUrl());
 
+            newStateDefinition.setQueryParams(splitUrlResult.queryParams);
+
+            // Build the full baseUrl path from the root state (not including query params)
+            newStateDefinition.setAbsoluteUrl(splitUrlResult.baseUrl);
             if (newStateDefinition.getParent() && newStateDefinition.getParent().getUrl()) {
-                newStateDefinition.setAbsoluteUrl(newStateDefinition.getParent().getAbsoluteUrl() + newStateDefinition.getUrl());
+                newStateDefinition.setAbsoluteUrl(newStateDefinition.getParent().getAbsoluteUrl() + newStateDefinition.getAbsoluteUrl());
             }
 
-            urlParser = Ext.create('StateRouter.staterouter.UrlParser');
-            urlParserResult = urlParser.parse(newStateDefinition.getAbsoluteUrl(), me.getAllUrlParamConditions(newStateDefinition));
+            // We call the parser twice, once with the full path to this state, including all parents baseUrls
+            // This gives us our regex so we can test if a user entered full URL matches this state
+            urlParserResult = this.urlParser.parse(newStateDefinition.getAbsoluteUrl(), me.getAllUrlParamConditions(newStateDefinition));
             newStateDefinition.setAbsoluteUrlRegex(urlParserResult.regex);
 
-            urlParserResult = urlParser.parse(newStateDefinition.getUrl());
-            newStateDefinition.setParams(urlParserResult.params);
+            // Next, we pass just the partial URL for this specific state to the urlParser, this is just a simple
+            // way to extract the URL position based parameters solely for this state
+            urlParserResult = this.urlParser.parse(splitUrlResult.baseUrl);
+            newStateDefinition.setUrlParams(urlParserResult.params);
+
+            newStateDefinition.setParams(newStateDefinition.getUrlParams().concat(newStateDefinition.getQueryParams()));
         }
 
         me.states[newStateDefinition.getName()] = newStateDefinition;

@@ -1773,6 +1773,61 @@ describe("Router", function() {
             });
         });
 
+        it("should transition to state and set query params", function () {
+            router.state('home', {
+                url: '/home?min'
+            });
+
+            router.onHistoryChanged('/home?min=10');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home');
+                expect(router.getCurrentStateParams().min).toBe('10');
+            });
+        });
+
+        it("should transition to state and set multiple query params", function () {
+            router.state('home', {
+                url: '/home?min&max'
+            });
+
+            router.onHistoryChanged('/home?max=100&min=10');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home');
+                expect(router.getCurrentStateParams().min).toBe('10');
+                expect(router.getCurrentStateParams().max).toBe('100');
+            });
+        });
+
+        it("should transition to child state and all query params", function () {
+            router.state('home', {
+                url: '/home?min&max'
+            });
+
+            router.state('home.contacts', {
+                url: '/contacts?enabled&sortBy&hidden'
+            });
+
+            router.onHistoryChanged('/home/contacts?enabled&max=100&min=10&sortBy=name&hidden=false');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('home.contacts');
+                expect(router.getCurrentStateParams().min).toBe('10');
+                expect(router.getCurrentStateParams().max).toBe('100');
+                expect(router.getCurrentStateParams().enabled).toBe(true);
+                expect(router.getCurrentStateParams().sortBy).toBe('name');
+                expect(router.getCurrentStateParams().hidden).not.toBe('false');
+                expect(router.getCurrentStateParams().hidden).toBe(false);
+            });
+        });
+
         it("should transition to child state even if parent has no url", function () {
             router.state('home', {
             });

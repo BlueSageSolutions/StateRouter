@@ -122,7 +122,7 @@ Ext.define('StateRouter.staterouter.Router', {
         var me = this,
             matches,
             curStateDef,
-            allParams = [],
+            allPositionalUrlParams = [],
             paramsObj = {};
 
         this.stateManager.each(function (key, stateDef) {
@@ -132,15 +132,34 @@ Ext.define('StateRouter.staterouter.Router', {
 
                     curStateDef = stateDef;
                     do {
-                        allParams = curStateDef.getParams().concat(allParams);
+                        allPositionalUrlParams = curStateDef.getUrlParams().concat(allPositionalUrlParams);
                     } while ((curStateDef = curStateDef.getParent()) !== null);
 
 
-                    if (allParams.length > 0) {
+                    if (allPositionalUrlParams.length > 0) {
 
-                        for (var i = 0; i < allParams.length; i++) {
-                            paramsObj[allParams[i]] = matches[i+1];
+                        for (var i = 0; i < allPositionalUrlParams.length; i++) {
+                            paramsObj[allPositionalUrlParams[i]] = matches[i+1];
                         }
+                    }
+
+                    // Now, extract the query params
+                    var queryRegex = /(?:\?|&)(\w+)(?:=(\w+))?/g;
+                    var regResult;
+
+                    while ((regResult = queryRegex.exec(token))) {
+                        var queryParam = regResult[1];
+                        var queryValue = regResult[2];
+
+                        if (queryValue === undefined) {
+                            queryValue = true;
+                        } else if (queryValue === 'false') {
+                            queryValue = false;
+                        } else if (queryValue === 'true') {
+                            queryValue = true;
+                        }
+
+                        paramsObj[queryParam] = queryValue;
                     }
 
                     me.transitionTo(stateDef.getName(), paramsObj);
@@ -423,11 +442,23 @@ Ext.define('StateRouter.staterouter.Router', {
             absoluteUrl = state.getPathNode().getDefinition().getAbsoluteUrl();
             if (absoluteUrl !== null) {
 
-                allParams = state.getAllParams();
+                allParams = Ext.apply({}, state.getAllParams());
 
                 for (var param in allParams) {
                     if (allParams.hasOwnProperty(param)) {
-                        absoluteUrl = absoluteUrl.replace(':' + param, allParams[param]);
+                        if (absoluteUrl.indexOf(':' + param) !== -1) {
+                            absoluteUrl = absoluteUrl.replace(':' + param, allParams[param]);
+                            delete allParams[param];
+                        }
+                    }
+                }
+
+                var count = 0;
+                for (param in allParams) {
+                    if (allParams.hasOwnProperty(param)) {
+                        absoluteUrl += (count === 0) ? '?' : '&';
+                        absoluteUrl += param + '=' + allParams[param];
+                        count++;
                     }
                 }
 
