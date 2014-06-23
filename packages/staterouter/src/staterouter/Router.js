@@ -265,7 +265,8 @@ Ext.define('StateRouter.staterouter.Router', {
             resolveBeforeTransition = [],
             transitionEvent,
             reload = false,
-            force = Ext.isObject(options) && options.force === true;
+            force = Ext.isObject(options) && options.force === true,
+            keepUrl = Ext.isObject(options) && options.keepUrl === true;
 
         if (options) {
             reload = options.reload;
@@ -347,7 +348,7 @@ Ext.define('StateRouter.staterouter.Router', {
             me.transitioning = true;
         }
 
-        if (!me.isLastNodeForwarding()) {
+        if (!me.isLastNodeForwarding() && !keepUrl) {
             me.updateAddressBar(me.toState);
         }
 
