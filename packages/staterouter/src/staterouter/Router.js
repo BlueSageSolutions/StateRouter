@@ -90,6 +90,10 @@ Ext.define('StateRouter.staterouter.Router', {
                 me.errorHandler = config.errorHandler;
             }
 
+            if (config.hasOwnProperty('unknownUrlHandler')) {
+                me.unknownUrlHandler = config.unknownUrlHandler;
+            }
+
             if (me.app && !me.controllerProviderFn) {
                 me.controllerProviderFn = function (name) {
                     return me.app.getController(name);
@@ -123,7 +127,13 @@ Ext.define('StateRouter.staterouter.Router', {
             matches,
             curStateDef,
             allPositionalUrlParams = [],
-            paramsObj = {};
+            paramsObj = {},
+            foundMatch = false,
+            unknownUrlHandlerResult;
+
+        if (me.transitioning) {
+            return;
+        }
 
         this.stateManager.each(function (key, stateDef) {
             if (stateDef.getAbsoluteUrlRegex()) {
@@ -163,10 +173,23 @@ Ext.define('StateRouter.staterouter.Router', {
                     }
 
                     me.transitionTo(stateDef.getName(), paramsObj);
+                    foundMatch = true;
                     return false;
                 }
             }
         });
+
+        if (!foundMatch && me.unknownUrlHandler) {
+            unknownUrlHandlerResult = Ext.callback(me.unknownUrlHandler, me, [token]);
+
+            if (Ext.isString(unknownUrlHandlerResult)) {
+                me.transitionTo(unknownUrlHandlerResult);
+            } else if (Ext.isObject(unknownUrlHandlerResult)) {
+                me.transitionTo(unknownUrlHandlerResult.stateName,
+                    unknownUrlHandlerResult.stateParams || {},
+                    unknownUrlHandlerResult.options || {});
+            }
+        }
     },
 
     handleCurrentHistoryToken: function (noHistoryTokenCallback) {
