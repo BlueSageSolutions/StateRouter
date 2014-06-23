@@ -1761,6 +1761,46 @@ describe("Router", function() {
             });
         });
 
+        it("should allow you to keep the current URL if state does not define URL", function () {
+            // TODO: This test does not actually work as it seems there's no way to obtain the current history token
+            router.state('home', {
+                url: '/home'
+            });
+            router.state('home.wizard', {
+                url: '/wizard',
+                forwardToChild: function () {
+                    return 'home.wizard.step1';
+                }
+            });
+            router.state('home.wizard.step1', {
+                url: '/step1'
+            });
+            router.state('home.wizard.step2', {
+            });
+
+            runs(function () {
+                router.go('home.wizard');
+            });
+
+            waits(1);
+
+            runs(function () {
+//                expect(Ext.History.getToken()).toBe('/home/wizard/step1');
+                expect(router.getCurrentState()).toBe('home.wizard.step1');
+            });
+
+            runs(function () {
+                router.go('home.wizard.step2', {}, { keepUrl: true });
+            });
+
+            waits(1);
+
+            runs(function () {
+//                expect(Ext.History.getToken()).toBe('/home/wizard/step2');
+                expect(router.getCurrentState()).toBe('home.wizard.step2');
+            });
+        });
+
         it("should transition to child state on token change", function () {
             router.state('home', {
                 url: '/home'
