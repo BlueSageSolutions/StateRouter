@@ -1696,6 +1696,71 @@ describe("Router", function() {
             });
         });
 
+        it("should intercept invalid URLs and redirect to a state with a simple name", function () {
+            router.configure({
+                unknownUrlHandler: function () {
+                    return "about";
+                }
+            });
+
+            router.state('home', {
+                url: '/home'
+            }).state('about', {
+                url: '/about'
+            });
+
+            router.onHistoryChanged('/hello');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('about');
+            });
+        });
+
+        it("should intercept invalid URLs and redirect using an object with transition properties", function () {
+            router.configure({
+                unknownUrlHandler: function () {
+                    return {
+                        stateName: 'main.c2',
+                        stateParams: {
+                            sort: 'name'
+                        },
+                        options: {
+                            inherit: true
+                        }
+                    };
+                }
+            });
+
+            router.state('main', {
+                url: '/main/:id'
+            }).state('main.c1', {
+                url: '/c1'
+            }).state('main.c2', {
+                url: '/c2?sort'
+            });
+
+            router.onHistoryChanged('/main/123/c1');
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('main.c1');
+                router.onHistoryChanged('/main/123/hello');
+            });
+
+            waits(1);
+
+            runs(function () {
+                expect(router.getCurrentState()).toBe('main.c2');
+                expect(router.getCurrentStateParams()).toEqual({
+                    sort: 'name',
+                    id: '123'
+                });
+            });
+        });
+
         it("should transition to child state on token change", function () {
             router.state('home', {
                 url: '/home'
