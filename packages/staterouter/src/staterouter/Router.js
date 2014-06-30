@@ -413,7 +413,6 @@ Ext.define('StateRouter.staterouter.Router', {
             }
         }, function (error) {
             var errorEvent = Ext.apply({ error: error}, transitionEvent);
-            window.location.hash = '';
             me.transitioning = false;
             me.notifyAll(StateRouter.STATE_CHANGE_FAILED, errorEvent);
             me.currentState = null;
