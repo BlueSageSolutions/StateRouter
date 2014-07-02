@@ -264,6 +264,8 @@ Ext.define('StateRouter.staterouter.Router', {
             viewTransitionPromise,
             resolveBeforeTransition = [],
             transitionEvent,
+            lastNodeForwarding,
+            historyPromise = new RSVP.Promise(function (resolve) { resolve(); }),
             reload = false,
             force = Ext.isObject(options) && options.force === true,
             keepUrl = Ext.isObject(options) && options.keepUrl === true;
@@ -348,8 +350,10 @@ Ext.define('StateRouter.staterouter.Router', {
             me.transitioning = true;
         }
 
-        if (!me.isLastNodeForwarding() && !keepUrl) {
-            me.updateAddressBar(me.toState);
+        lastNodeForwarding = me.isLastNodeForwarding();
+
+        if (!lastNodeForwarding && !keepUrl) {
+            historyPromise = me.updateAddressBar(me.toState);
         }
 
         // We're starting the transition
@@ -389,6 +393,11 @@ Ext.define('StateRouter.staterouter.Router', {
             // exceptions are being eaten by RSVP
             return new RSVP.Promise(function (resolve) {
 
+                // The last node was forwarded, update the address bar now
+                if (lastNodeForwarding) {
+                    historyPromise = me.updateAddressBar(me.toState);
+                }
+
                 // Because the last node may forward to a child and we do not know what the forwarded
                 // state is until the the resolvables are resolved, we only know the final
                 // state at this point (when forwardToChild)
@@ -400,23 +409,30 @@ Ext.define('StateRouter.staterouter.Router', {
                 resolve();
             });
         }).then(function() {
-            me.currentState = me.toState;
-            me.transitioning = false;
+            historyPromise.then(function () {
+                me.currentState = me.toState;
 
-            // If we've kept everything, then it means we navigated to some parent state
-            // we must notify the last node so it knows to update its UI
-            if (me.keep === me.currentState.getPath().length) {
-                me.notifyAll(StateRouter.STATE_CHANGED, transitionEvent);
-            } else {
-                // We notify all except the last node
-                me.notifyAncestors(StateRouter.STATE_CHANGED, transitionEvent);
-            }
+                me.transitioning = false;
+
+                // If we've kept everything, then it means we navigated to some parent state
+                // we must notify the last node so it knows to update its UI
+                if (me.keep === me.currentState.getPath().length) {
+                    me.notifyAll(StateRouter.STATE_CHANGED, transitionEvent);
+                } else {
+                    // We notify all except the last node
+                    me.notifyAncestors(StateRouter.STATE_CHANGED, transitionEvent);
+                }
+            });
+
         }, function (error) {
             var errorEvent = Ext.apply({ error: error}, transitionEvent);
-            me.transitioning = false;
-            me.notifyAll(StateRouter.STATE_CHANGE_FAILED, errorEvent);
-            me.currentState = null;
-            Ext.callback(me.errorHandler, me, [errorEvent]);
+
+            historyPromise.then(function () {
+                me.transitioning = false;
+                me.notifyAll(StateRouter.STATE_CHANGE_FAILED, errorEvent);
+                me.currentState = null;
+                Ext.callback(me.errorHandler, me, [errorEvent]);
+            });
         });
 
         return true;
@@ -453,14 +469,15 @@ Ext.define('StateRouter.staterouter.Router', {
     updateAddressBar: function (state) {
         var me = this,
             absoluteUrl,
-            allParams;
+            allParams,
+            promise;
 
         if (!me.historyInitialized) {
-            return;
+            return new RSVP.Promise(function (resolve) { resolve(); });
         }
 
         if (!state) {
-            Ext.History.add('/');
+            return this.addHistoryToken('/');
         } else {
             absoluteUrl = state.getPathNode().getDefinition().getAbsoluteUrl();
             if (absoluteUrl !== null) {
@@ -485,11 +502,50 @@ Ext.define('StateRouter.staterouter.Router', {
                     }
                 }
 
-                Ext.History.add(absoluteUrl);
+                return this.addHistoryToken(absoluteUrl);
             } else {
-                Ext.History.add('/');
+                return this.addHistoryToken('/');
             }
         }
+    },
+
+    /**
+     * Adds the new history token if different than the current.
+     *
+     * If the history changed, returns a promise which will resolve when
+     * the history changes.
+     *
+     * Otherwise, returns a fulfilled promise
+     *
+     * @param token
+     * @returns {Promise}
+     */
+    addHistoryToken: function (token) {
+        // If the history isn't changing, return a fulfilled promise immediately
+        if (Ext.History.getToken() === token) {
+            return new RSVP.Promise(function (resolve) { resolve(); });
+        }
+
+        // Otherwise, we expect the history to change
+        // 1. Create a promise which resolves on history change
+        // 2. Add a token to the history
+        // 3. Return the promise
+        var me = this;
+        var promise = new RSVP.Promise(function (resolve) {
+            Ext.History.on('change', function () {
+                // Allow all other history change listeners to complete first.
+                //
+                // Mainly, we want onHistoryChanged to be called before this method resolves so that
+                // transitioning is still set to true.  If we did not do this, this method may complete
+                // first completing the transition, then onHistoryChanged will be called and attempt
+                // to transition to the same state.
+                setTimeout(function () {
+                    resolve();
+                }, 1);
+            }, me, { single: true });
+        });
+        Ext.History.add(token);
+        return promise;
     },
 
     getHref: function (stateName, allParams) {
@@ -732,8 +788,6 @@ Ext.define('StateRouter.staterouter.Router', {
 
             resolveAllPromise = resolveAllPromise.then(function () {
                 me.appendForwardedNode();
-                me.updateAddressBar(me.toState);
-
                 return me.promiseResolver.createResolvePromise(toPath, toPath.length - 1);
             });
         }

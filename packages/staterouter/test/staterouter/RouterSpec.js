@@ -1680,6 +1680,7 @@ describe("Router", function() {
 
         beforeEach(function() {
             router = Ext.create('StateRouter.staterouter.Router');
+            Ext.History.clearListeners();
         });
 
         it("should transition to simple state on token change", function () {
@@ -1688,6 +1689,13 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home');
+
+            waits(1);
+
+            runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
 
             waits(1);
 
@@ -1709,7 +1717,17 @@ describe("Router", function() {
                 url: '/about'
             });
 
-            router.onHistoryChanged('/hello');
+            runs(function () {
+                router.onHistoryChanged('/hello');
+            });
+
+            waits(1);
+
+            runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
+
 
             waits(1);
 
@@ -1746,8 +1764,22 @@ describe("Router", function() {
             waits(1);
 
             runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
+
+            waits(1);
+
+            runs(function () {
                 expect(router.getCurrentState()).toBe('main.c1');
                 router.onHistoryChanged('/main/123/hello');
+            });
+
+            waits(1);
+
+            runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
             });
 
             waits(1);
@@ -1785,6 +1817,13 @@ describe("Router", function() {
             waits(1);
 
             runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
+
+            waits(1);
+
+            runs(function () {
 //                expect(Ext.History.getToken()).toBe('/home/wizard/step1');
                 expect(router.getCurrentState()).toBe('home.wizard.step1');
             });
@@ -1814,6 +1853,13 @@ describe("Router", function() {
             waits(1);
 
             runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
+
+            waits(1);
+
+            runs(function () {
                 expect(router.getCurrentState()).toBe('home.contact');
             });
         });
@@ -1827,6 +1873,13 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home/contact/355');
+
+            waits(1);
+
+            runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
 
             waits(1);
 
@@ -1845,6 +1898,13 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home/contact/355/Jones');
+
+            waits(1);
+
+            runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
 
             waits(1);
 
@@ -1871,6 +1931,13 @@ describe("Router", function() {
             waits(1);
 
             runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
+
+            waits(1);
+
+            runs(function () {
                 expect(router.getCurrentState()).toBe('home.contact.address');
                 expect(router.getCurrentStateParams().id).toBe('355');
                 expect(router.getCurrentStateParams().name).toBe('Jones');
@@ -1888,6 +1955,13 @@ describe("Router", function() {
             waits(1);
 
             runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
+
+            waits(1);
+
+            runs(function () {
                 expect(router.getCurrentState()).toBe('home');
                 expect(router.getCurrentStateParams().min).toBe('10');
             });
@@ -1899,6 +1973,13 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home?max=100&min=10');
+
+            waits(1);
+
+            runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
 
             waits(1);
 
@@ -1923,6 +2004,13 @@ describe("Router", function() {
             waits(1);
 
             runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
+
+            waits(1);
+
+            runs(function () {
                 expect(router.getCurrentState()).toBe('home.contacts');
                 expect(router.getCurrentStateParams().min).toBe('10');
                 expect(router.getCurrentStateParams().max).toBe('100');
@@ -1941,6 +2029,13 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/contact');
+
+            waits(1);
+
+            runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
 
             waits(1);
 
@@ -1968,6 +2063,13 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home/contact///address/edit/b');
+
+            waits(1);
+
+            runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
+            });
 
             waits(1);
 
@@ -2008,6 +2110,13 @@ describe("Router", function() {
 
             runs(function() {
                 router.onHistoryChanged('/home/contact/111/aaa/address/edit/ccc');
+            });
+
+            waits(1);
+
+            runs(function () {
+                // Simulate address bar changing
+                Ext.History.fireEvent('change');
             });
 
             waits(1);
