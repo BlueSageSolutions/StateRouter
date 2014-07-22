@@ -971,6 +971,10 @@ Ext.define('StateRouter.staterouter.Router', {
         return StateRouter.Router.getCurrentStateParams();
     };
 
+    StateRouter.getStateManager = function () {
+        return StateRouter.Router.stateManager;
+    };
+
 
     // Events
     StateRouter.STATE_CHANGE_REQUEST = 'stateChangeRequest';
