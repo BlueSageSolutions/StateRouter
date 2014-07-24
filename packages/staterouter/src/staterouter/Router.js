@@ -208,6 +208,18 @@ Ext.define('StateRouter.staterouter.Router', {
         }
     },
 
+    /**
+     * Reloads the leaf state forcefully. If you instead want to reload firing a state change request,
+     * pass in { force: false }
+     */
+    reload: function (options) {
+        var opts = options || {};
+        StateRouter.go(StateRouter.getCurrentState(), {}, Ext.apply({
+            reload: StateRouter.getCurrentState(),
+            force: true
+        }, opts));
+    },
+
     state: function (configOrName, optConfig) {
         this.stateManager.register(configOrName, optConfig);
         return this;
@@ -953,6 +965,10 @@ Ext.define('StateRouter.staterouter.Router', {
 
     StateRouter.state = function(configOrName, optConfig) {
         return StateRouter.Router.state(configOrName, optConfig);
+    };
+
+    StateRouter.reload = function(options) {
+        return StateRouter.Router.reload(options);
     };
 
     StateRouter.go = function(newStateName, stateParams, options) {
