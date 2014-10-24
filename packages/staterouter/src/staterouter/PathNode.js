@@ -4,6 +4,8 @@ Ext.define('StateRouter.staterouter.PathNode', {
         'StateRouter.staterouter.StateDefinition'
     ],
 
+    $configPrefixed: false,
+
     config: {
         definition: null,
         ownParams: {},

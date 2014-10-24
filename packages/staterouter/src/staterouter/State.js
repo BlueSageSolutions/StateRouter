@@ -4,6 +4,8 @@ Ext.define('StateRouter.staterouter.State', {
         'StateRouter.staterouter.PathNode'
     ],
 
+    $configPrefixed: false,
+
     config: {
         path: [], // an array of states leading up to and including this path
         allParams: {}

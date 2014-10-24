@@ -13,11 +13,6 @@ Ext.define('StateRouter.staterouter.StateManager', {
         this.states = {};
         this.mixins.observable.constructor.call(this, config);
 
-        this.addEvents(
-            'stateregistered',
-            'stateunregistered'
-        );
-
         this.urlParser = Ext.create('StateRouter.staterouter.UrlParser');
     },
 
