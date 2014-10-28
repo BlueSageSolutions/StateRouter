@@ -1,5 +1,7 @@
 Ext.define('StateRouter.staterouter.StateDefinition', {
 
+    $configPrefixed: false,
+
     config: {
         name: null,
         parent: null,
