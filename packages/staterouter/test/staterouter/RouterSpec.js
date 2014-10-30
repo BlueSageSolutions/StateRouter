@@ -57,7 +57,7 @@ describe("Router", function() {
             expect(router.stateManager.getStateDefinition('state2')).not.toBeNull();
         });
 
-        it("should call controllerProcessor if defined to obtain controller name", function () {
+        it("should call controllerProcessor if defined to obtain controller name", function (done) {
             var which,
                 desktopController = {
                     start: function () {
@@ -94,56 +94,72 @@ describe("Router", function() {
 
             router.go('state1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(which).toBe('mobile');
-            });
+                done();
+            }, 1);
+
         });
 
-        it("should call viewProcessor if defined to obtain view name", function () {
-            Ext.define('ViewProcessorTestView', {
-                extend: 'Ext.container.Container',
-                alias: 'widget.viewprocessortestview',
+        describe("View Tests", function () {
 
-                which: 'desktop'
+            var vp;
+
+            beforeEach(function () {
+                vp = Ext.create('Ext.container.Container', {
+                    id: 'vp',
+                    renderTo: Ext.getBody()
+                });
             });
 
-            Ext.define('ViewProcessorTestViewMobile', {
-                extend: 'Ext.container.Container',
-                alias: 'widget.viewprocessortestviewmobile',
-
-                which: 'mobile'
+            afterEach(function () {
+                vp.destroy();
             });
 
 
-            var mobile = true,
-                vp = Ext.create('Ext.container.Viewport', {
-                id: 'vp'
-            });
+            it("should call viewProcessor if defined to obtain view name", function (done) {
 
-            router
-                .configure({
-                    viewProcessor: function (name) {
-                        if (mobile) {
-                            return name + 'Mobile';
-                        } else {
-                            return name;
-                        }
-                    },
-                    root: 'vp'
-                }).state('state1', {
-                    view: 'ViewProcessorTestView'
+
+                Ext.define('ViewProcessorTestView', {
+                    extend: 'Ext.container.Container',
+                    alias: 'widget.viewprocessortestview',
+
+                    which: 'desktop'
                 });
 
-            router.go('state1');
+                Ext.define('ViewProcessorTestViewMobile', {
+                    extend: 'Ext.container.Container',
+                    alias: 'widget.viewprocessortestviewmobile',
 
-            waits(1);
+                    which: 'mobile'
+                });
 
-            runs(function () {
-                expect(vp.down('container').which).toBe('mobile');
+
+                var mobile = true;
+
+                router
+                    .configure({
+                        viewProcessor: function (name) {
+                            if (mobile) {
+                                return name + 'Mobile';
+                            } else {
+                                return name;
+                            }
+                        },
+                        root: 'vp'
+                    }).state('state1', {
+                        view: 'ViewProcessorTestView'
+                    });
+
+                router.go('state1');
+
+                setTimeout(function () {
+                    expect(vp.down('container').which).toBe('mobile');
+                    done();
+                }, 1);
             });
         });
+
     });
 
     describe("Basic State Transitions", function() {
@@ -153,119 +169,105 @@ describe("Router", function() {
             router = Ext.create('StateRouter.staterouter.Router');
         });
 
-        it("should allow you to transition from no state to a top-level state", function () {
+        it("should allow you to transition from no state to a top-level state", function (done) {
             router.state('state1', {});
             router.go('state1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('state1');
-            });
+                done();
+            }, 1);
         });
 
-        it("when transitioning down, last node should not receive state change event", function () {
+        it("when transitioning down, last node should not receive state change event", function (done) {
             var count = 0;
 
-            runs(function () {
-                var controller = {
+            var controller = {
 
-                    onStateRouterEvent: function (eventName, eventObj) {
-                        if (eventName === StateRouter.STATE_CHANGED) {
-                            count++;
-                        }
+                onStateRouterEvent: function (eventName, eventObj) {
+                    if (eventName === StateRouter.STATE_CHANGED) {
+                        count++;
                     }
-                };
+                }
+            };
 
-                router.configure({
-                    controllerProvider: function (name) {
-                        if (name === 'c') {
-                            return controller;
-                        }
-                        return null;
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === 'c') {
+                        return controller;
                     }
-                });
-                router.state('a', {});
-                router.state('a.b', {});
-                router.state('a.b.c', { controller: 'c'});
-                router.go('a.b');
+                    return null;
+                }
             });
+            router.state('a', {});
+            router.state('a.b', {});
+            router.state('a.b.c', { controller: 'c'});
+            router.go('a.b');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 router.go('a.b.c');
-            });
 
-            waits(1);
-
-            runs(function () {
-                expect(count).toBe(0);
-            });
+                setTimeout(function () {
+                    expect(count).toBe(0);
+                    done();
+                }, 1);
+            }, 1);
         });
 
-        it("when transitioning up, last node SHOULD receive state change event", function () {
+        it("when transitioning up, last node SHOULD receive state change event", function (done) {
             var count = 0,
                 upCount = 0;
 
-            runs(function () {
-                var controller = {
+            var controller = {
 
-                    onStateRouterEvent: function (eventName, eventObj) {
-                        if (eventName === StateRouter.STATE_CHANGED) {
-                            count++;
-                            if (eventObj.fromState === '1.2' && eventObj.toState === '1') {
-                                upCount++;
-                            }
+                onStateRouterEvent: function (eventName, eventObj) {
+                    if (eventName === StateRouter.STATE_CHANGED) {
+                        count++;
+                        if (eventObj.fromState === '1.2' && eventObj.toState === '1') {
+                            upCount++;
                         }
                     }
-                };
+                }
+            };
 
-                router.configure({
-                    controllerProvider: function (name) {
-                        if (name === '1') {
-                            return controller;
-                        }
-                        return null;
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === '1') {
+                        return controller;
                     }
-                });
-                router.state('1', { controller: '1'});
-                router.state('1.2', {});
-                router.state('1.2.3', {});
-                router.go('1.2');
+                    return null;
+                }
             });
+            router.state('1', { controller: '1'});
+            router.state('1.2', {});
+            router.state('1.2.3', {});
+            router.go('1.2');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 router.go('1');
-            });
 
-            waits(1);
-
-            runs(function () {
-                expect(count).toBe(2);
-                expect(upCount).toBe(1);
-            });
+                setTimeout(function () {
+                    expect(count).toBe(2);
+                    expect(upCount).toBe(1);
+                    done();
+                }, 1);
+            }, 1);
         });
+//
+        it("should allow you to transition from no state to any state", function (done) {
+            router.state('state1', {});
+            router.state('state1.home', {});
+            router.state('state1.home.contact', {});
+            router.state('state2', {});
+            router.go('state1.home.contact');
 
-        it("should allow you to transition from no state to any state", function () {
-            runs(function () {
-                router.state('state1', {});
-                router.state('state1.home', {});
-                router.state('state1.home.contact', {});
-                router.state('state2', {});
-                router.go('state1.home.contact');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('state1.home.contact');
-            });
+                done();
+            }, 1);
         });
 
-        it("should allow controllers to cancel a transition", function () {
+        it("should allow controllers to cancel a transition", function (done) {
             var c1 = {
 
                 },
@@ -278,38 +280,33 @@ describe("Router", function() {
                 };
 
 
-            runs(function () {
-                router.configure({
-                    controllerProvider: function (name) {
-                        if (name === 'c1') {
-                            return c1;
-                        }
-                        if (name === 'c2') {
-                            return c2;
-                        }
-                        return null;
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === 'c1') {
+                        return c1;
                     }
-                });
-                router.state('state1', { controller: 'c1'});
-                router.state('state1.home', { controller: 'c2'});
-                router.go('state1.home');
+                    if (name === 'c2') {
+                        return c2;
+                    }
+                    return null;
+                }
             });
+            router.state('state1', { controller: 'c1'});
+            router.state('state1.home', { controller: 'c2'});
+            router.go('state1.home');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('state1.home');
                 router.go('state1');
-            });
 
-            waits(1);
-
-            runs(function () {
-                expect(router.getCurrentState()).toBe('state1.home');
-            });
+                setTimeout(function () {
+                    expect(router.getCurrentState()).toBe('state1.home');
+                    done();
+                }, 1);
+            }, 1);
         });
 
-        it("should allow errorHandler to handle transition errors", function () {
+        it("should allow errorHandler to handle transition errors", function (done) {
             var c1 = {
               start: function () {
                   var a = 1 + blah;
@@ -331,15 +328,14 @@ describe("Router", function() {
             });
             router.go('state1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(errorObj).not.toBeUndefined();
                 expect(errorObj).not.toBeNull();
-            });
-
+                done();
+            }, 1);
         });
-        it("should fail state transitions if error during startup", function () {
+
+        it("should fail state transitions if error during startup", function (done) {
             var errorObj,
                 c2 = {
                     start: function () {
@@ -372,23 +368,20 @@ describe("Router", function() {
             });
             router.go('state1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 router.go('state2');
-            });
 
-            waits(1);
-
-            runs(function () {
-                expect(router.getCurrentState()).toBe(null);
-                expect(errorObj).not.toBeUndefined();
-                expect(errorObj.fromState).toBe('state1');
-                expect(errorObj.toState).toBe('state2');
-            });
+                setTimeout(function () {
+                    expect(router.getCurrentState()).toBe(null);
+                    expect(errorObj).not.toBeUndefined();
+                    expect(errorObj.fromState).toBe('state1');
+                    expect(errorObj.toState).toBe('state2');
+                    done();
+                }, 1);
+            }, 1);
         });
 
-        it("should fail state transitions if error during resolve", function () {
+        it("should fail state transitions if error during resolve", function (done) {
             var errorObj,
                 c2 = {
                     resolve: {
@@ -423,68 +416,55 @@ describe("Router", function() {
             });
             router.go('state1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 router.go('state2');
-            });
 
-            waits(1);
-
-            runs(function () {
-                expect(router.getCurrentState()).toBe(null);
-                expect(errorObj).not.toBeUndefined();
-                expect(errorObj.fromState).toBe('state1');
-                expect(errorObj.toState).toBe('state2');
-            });
+                setTimeout(function () {
+                    expect(router.getCurrentState()).toBe(null);
+                    expect(errorObj).not.toBeUndefined();
+                    expect(errorObj.fromState).toBe('state1');
+                    expect(errorObj.toState).toBe('state2');
+                    done();
+                }, 1);
+            }, 1);
         });
 
-        it("should allow you to transition any state to another state", function () {
-            runs(function () {
-                router.state('state1', {});
-                router.state('state1.home', {});
-                router.state('state1.home.contact', {});
-                router.state('state2', {});
-                router.go('state1.home.contact');
-            });
+        it("should allow you to transition any state to another state", function (done) {
+            router.state('state1', {});
+            router.state('state1.home', {});
+            router.state('state1.home.contact', {});
+            router.state('state2', {});
+            router.go('state1.home.contact');
 
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 router.go('state1.home');
-            });
 
-            waits(1);
-
-            runs(function () {
-                expect(router.getCurrentState()).toBe('state1.home');
-            });
+                setTimeout(function () {
+                    expect(router.getCurrentState()).toBe('state1.home');
+                    done();
+                }, 1);
+            }, 1);
         });
 
-        it("should allow one state to forward to another state", function () {
+        it("should allow one state to forward to another state", function (done) {
 
-            runs(function () {
-                router.state('state1', {});
-                router.state('state1.contact', {
-                    forwardToChild: function () {
-                        return 'state1.contact.summary';
-                    }
-                });
-                router.state('state1.contact.summary', {});
-                router.state('state2', {});
-                router.go('state1.contact');
+            router.state('state1', {});
+            router.state('state1.contact', {
+                forwardToChild: function () {
+                    return 'state1.contact.summary';
+                }
             });
+            router.state('state1.contact.summary', {});
+            router.state('state2', {});
+            router.go('state1.contact');
 
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('state1.contact.summary');
-            });
+                done();
+            }, 1);
         });
 
-        it("should send the forwarded state name in the STATE_CHANGED event, but not STATE_CHANGE_REQUEST", function () {
+        it("should send the forwarded state name in the STATE_CHANGED event, but not STATE_CHANGE_REQUEST", function (done) {
             var toStateRequest,
                 toStateChange,
                 controllerB,
@@ -506,44 +486,38 @@ describe("Router", function() {
                 }
             };
 
-            runs(function () {
-                router.configure({
-                    controllerProvider: function (name) {
-                        if (name === 'b') {
-                            return controllerB;
-                        } else if (name === 'z') {
-                            return controllerZ;
-                        }
-                        return {};
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === 'b') {
+                        return controllerB;
+                    } else if (name === 'z') {
+                        return controllerZ;
                     }
-                });
-                router.state('a', {});
-                router.state('a.b', {
-                    controller: 'b',
-                    forwardToChild: function () {
-                        return 'a.b.c';
-                    }
-                });
-                router.state('a.b.c', {});
-                router.state('z', {
-                    controller: 'z'
-                });
-                router.go('z');
+                    return {};
+                }
             });
-
-
-            waits(1);
-
-            runs(function () {
-               router.go('a.b');
+            router.state('a', {});
+            router.state('a.b', {
+                controller: 'b',
+                forwardToChild: function () {
+                    return 'a.b.c';
+                }
             });
-
-            waits(1);
-
-            runs(function () {
-                expect(toStateRequest).toBe('a.b');
-                expect(toStateChange).toBe('a.b.c');
+            router.state('a.b.c', {});
+            router.state('z', {
+                controller: 'z'
             });
+            router.go('z');
+
+            setTimeout(function () {
+                router.go('a.b');
+
+                setTimeout(function () {
+                    expect(toStateRequest).toBe('a.b');
+                    expect(toStateChange).toBe('a.b.c');
+                    done();
+                }, 1);
+            }, 1);
         });
     });
 
@@ -554,7 +528,7 @@ describe("Router", function() {
             router = Ext.create('StateRouter.staterouter.Router');
         });
 
-        it("should start a controller when entering a state", function () {
+        it("should start a controller when entering a state", function (done) {
             var value;
 
             router.configure({controllerProvider: function () {
@@ -568,14 +542,13 @@ describe("Router", function() {
             router.state('state1', {controller: 'DoesntMatter'});
             router.go('state1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(value).toBe('Hello');
-            });
+                done();
+            }, 1);
         });
 
-        it("should stop a controller when entering a state", function () {
+        it("should stop a controller when entering a state", function (done) {
             var value;
 
             router.configure({controllerProvider: function (name) {
@@ -600,22 +573,19 @@ describe("Router", function() {
             router.state('new', {controller: 'New'});
             router.go('old');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 router.go('new');
-            });
 
-            waits(1);
-
-            runs(function () {
-                expect(value).not.toBe('World');
-                expect(value).toBe('Hello');
-                expect(router.getCurrentState()).toBe('new');
-            });
+                setTimeout(function () {
+                    expect(value).not.toBe('World');
+                    expect(value).toBe('Hello');
+                    expect(router.getCurrentState()).toBe('new');
+                    done();
+                }, 1);
+            }, 1);
         });
 
-        it("should pass state name to controller", function () {
+        it("should pass state name to controller", function (done) {
             var aState,
                 bState;
 
@@ -640,15 +610,14 @@ describe("Router", function() {
             router.state('a.b', {controller: 'b'});
             router.go('a.b');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(aState).toBe('a');
                 expect(bState).toBe('a.b');
-            });
+                done();
+            }, 1);
         });
 
-        it("should set stateName property in controller", function () {
+        it("should set stateName property in controller", function (done) {
             var aStateName,
                 bStateName,
                 aController;
@@ -681,16 +650,15 @@ describe("Router", function() {
             router.state('a.b', {controller: 'b'});
             router.go('a.b');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(aStateName).toBe('a');
                 expect(aController.resolved.ensureStateNameSet).toBe('a');
                 expect(bStateName).toBe('a.b');
-            });
+                done();
+            }, 1);
         });
 
-        it("should fire application level events if application configured", function () {
+        it("should fire application level events if application configured", function (done) {
             var ready,
                 stateChanged = false,
                 app;
@@ -702,9 +670,7 @@ describe("Router", function() {
                 }
             });
 
-            waits(100);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(ready).toBe(true);
 
                 app = MyApp.getApplication();
@@ -723,16 +689,15 @@ describe("Router", function() {
                 router.state('a', {controller: 'a'});
                 router.state('a.b', {controller: 'b'});
                 router.go('a.b');
-            });
 
-            waits(100);
-
-            runs(function () {
-                expect(stateChanged).toBe(true);
-            });
+                setTimeout(function () {
+                    expect(stateChanged).toBe(true);
+                    done();
+                }, 100);
+            }, 100);
         });
 
-        it("should not restart controllers if transitioning to child", function () {
+        it("should not restart controllers if transitioning to child", function (done) {
             var value = 0;
 
             router.configure({controllerProvider: function (name) {
@@ -749,20 +714,17 @@ describe("Router", function() {
             router.state('home.contacts', {controller: 'New'});
             router.go('home');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 router.go('home.contacts');
-            });
 
-            waits(1);
-
-            runs(function () {
-                expect(value).toBe(1);
-            });
+                setTimeout(function () {
+                    expect(value).toBe(1);
+                    done();
+                }, 1);
+            }, 1);
         });
 
-        it("should all you to reload entire state even if equivalent params", function () {
+        it("should all you to reload entire state even if equivalent params", function (done) {
             var aStart = 0;
             var bStart = 0;
             var cStart = 0;
@@ -799,9 +761,7 @@ describe("Router", function() {
                 bId: 'World'
             });
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(aStart).toBe(1);
                 expect(bStart).toBe(1);
                 expect(cStart).toBe(1);
@@ -810,33 +770,30 @@ describe("Router", function() {
                     aId: 'Hello',
                     bId: 'World'
                 });
-            });
 
-            waits(1);
+                setTimeout(function () {
+                    expect(aStart).toBe(1);
+                    expect(bStart).toBe(1);
+                    expect(cStart).toBe(1);
 
-            runs(function () {
-                expect(aStart).toBe(1);
-                expect(bStart).toBe(1);
-                expect(cStart).toBe(1);
+                    router.go('a.b.c', {
+                        aId: 'Hello',
+                        bId: 'World'
+                    }, {
+                        reload: true
+                    });
 
-                router.go('a.b.c', {
-                    aId: 'Hello',
-                    bId: 'World'
-                }, {
-                    reload: true
-                });
-            });
-
-            waits(1);
-
-            runs(function () {
-                expect(aStart).toBe(2);
-                expect(bStart).toBe(2);
-                expect(cStart).toBe(2);
-            });
+                    setTimeout(function () {
+                        expect(aStart).toBe(2);
+                        expect(bStart).toBe(2);
+                        expect(cStart).toBe(2);
+                        done();
+                    }, 1);
+                }, 1);
+            }, 1);
         });
 
-        it("should all you to reload a state starting at some state even if equivalent params", function () {
+        it("should all you to reload a state starting at some state even if equivalent params", function (done) {
             var aStart = 0;
             var bStart = 0;
             var cStart = 0;
@@ -891,9 +848,7 @@ describe("Router", function() {
                 bId: 'World'
             });
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(aStart).toBe(1);
                 expect(bStart).toBe(1);
                 expect(cStart).toBe(1);
@@ -907,21 +862,20 @@ describe("Router", function() {
                 }, {
                     reload: 'a.b'
                 });
-            });
 
-            waits(1);
-
-            runs(function () {
-                expect(aStart).toBe(1);
-                expect(bStart).toBe(2);
-                expect(cStart).toBe(2);
-                expect(aStop).toBe(0);
-                expect(bStop).toBe(1);
-                expect(cStop).toBe(1);
-            });
+                setTimeout(function () {
+                    expect(aStart).toBe(1);
+                    expect(bStart).toBe(2);
+                    expect(cStart).toBe(2);
+                    expect(aStop).toBe(0);
+                    expect(bStop).toBe(1);
+                    expect(cStop).toBe(1);
+                    done();
+                }, 1);
+            }, 1);
         });
 
-        it("should all you to forcefully go to some state without notifying others and allowing them to cancel", function () {
+        it("should allow you to forcefully go to some state without notifying others and allowing them to cancel", function (done) {
             router.configure({controllerProvider: function (name) {
                 if (name === 'a') {
                     return {};
@@ -952,28 +906,23 @@ describe("Router", function() {
                 bId: 'World'
             });
 
-            waits(1);
-
-            runs(function () {
-                expect(router.getCurrentState() === 'a.b.c');
+            setTimeout(function () {
+                expect(router.getCurrentState()).toBe('a.b.c');
                 router.go('d');
-            });
 
-            waits(1);
+                setTimeout(function () {
+                    expect(router.getCurrentState()).toBe('a.b.c');
+                    router.go('d', {}, {force: true});
 
-            runs(function () {
-                expect(router.getCurrentState() === 'a.b.c');
-                router.go('d', {}, {force: true});
-            });
-
-            waits(1);
-
-            runs(function () {
-                expect(router.getCurrentState() === 'd');
-            });
+                    setTimeout(function () {
+                        expect(router.getCurrentState()).toBe('d');
+                        done();
+                    }, 1);
+                }, 1);
+            }, 1);
         });
 
-        it("should not pass child params to parent controllers", function () {
+        it("should not pass child params to parent controllers", function (done) {
             var homeId,
                 homeId2,
                 homeId3,
@@ -1026,9 +975,7 @@ describe("Router", function() {
                 summaryId: 700
             });
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(homeId).toBe(500);
                 expect(homeId2).toBe(500);
                 expect(homeId3).toBe(500);
@@ -1038,10 +985,11 @@ describe("Router", function() {
                 expect(summaryId).toBeUndefined();
                 expect(summaryId2).toBeUndefined();
                 expect(summaryId3).toBe(700);
-            });
+                done();
+            }, 1);
         });
 
-        it("should only start controllers where the state differs", function () {
+        it("should only start controllers where the state differs", function (done) {
             var homeStart = 0,
                 contactsStart = 0,
                 summaryStart = 0;
@@ -1082,196 +1030,162 @@ describe("Router", function() {
                 summaryId: 4
             });
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(homeStart).toBe(1);
                 expect(contactsStart).toBe(1);
                 expect(summaryStart).toBe(1);
-            });
 
-            waits(1);
-
-            // Going to same state, but summary has diff params
-            runs(function () {
+                // Going to same state, but summary has diff params
                 router.go('home.contacts.summary', {
                     homeId: 1,
                     anotherHomeId: 2,
                     contactId: 3,
                     summaryId: 5
                 });
-            });
 
-            waits(1);
+                setTimeout(function () {
+                    expect(homeStart).toBe(1);
+                    expect(contactsStart).toBe(1);
+                    expect(summaryStart).toBe(2);
 
-            runs(function () {
-                expect(homeStart).toBe(1);
-                expect(contactsStart).toBe(1);
-                expect(summaryStart).toBe(2);
-            });
+                    // Going to same state, but contact and summary has diff params
+                    router.go('home.contacts.summary', {
+                        homeId: 1,
+                        anotherHomeId: 2,
+                        contactId: 7,
+                        summaryId: 6
+                    });
 
-            // Going to same state, but contact and summary has diff params
-            runs(function () {
-                router.go('home.contacts.summary', {
-                    homeId: 1,
-                    anotherHomeId: 2,
-                    contactId: 7,
-                    summaryId: 6
-                });
-            });
+                    setTimeout(function () {
+                        expect(homeStart).toBe(1);
+                        expect(contactsStart).toBe(2);
+                        expect(summaryStart).toBe(3);
 
-            waits(1);
+                        // Going to same exact state
+                        router.go('home.contacts.summary', {
+                            homeId: 1,
+                            anotherHomeId: 2,
+                            contactId: 7,
+                            summaryId: 6
+                        });
 
-            runs(function () {
-                expect(homeStart).toBe(1);
-                expect(contactsStart).toBe(2);
-                expect(summaryStart).toBe(3);
-            });
+                        setTimeout(function () {
+                            expect(homeStart).toBe(1);
+                            expect(contactsStart).toBe(2);
+                            expect(summaryStart).toBe(3);
 
-            // Going to same exact state
-            runs(function () {
-                router.go('home.contacts.summary', {
-                    homeId: 1,
-                    anotherHomeId: 2,
-                    contactId: 7,
-                    summaryId: 6
-                });
-            });
+                            // Going to ancestor
+                            router.go('home.contacts', {
+                                homeId: 1,
+                                anotherHomeId: 2,
+                                contactId: 7,
+                                summaryId: 6 // will be ignored
+                            });
 
-            waits(1);
+                            setTimeout(function () {
+                                expect(homeStart).toBe(1);
+                                expect(contactsStart).toBe(2);
+                                expect(summaryStart).toBe(3);
 
-            runs(function () {
-                expect(homeStart).toBe(1);
-                expect(contactsStart).toBe(2);
-                expect(summaryStart).toBe(3);
-            });
+                                // Going to previous state
+                                router.go('home.contacts.summary', {
+                                    homeId: 1,
+                                    anotherHomeId: 2,
+                                    contactId: 7,
+                                    summaryId: 6
+                                });
 
-            // Going to ancestor
-            runs(function () {
-                router.go('home.contacts', {
-                    homeId: 1,
-                    anotherHomeId: 2,
-                    contactId: 7,
-                    summaryId: 6 // will be ignored
-                });
-            });
+                                setTimeout(function () {
+                                    expect(homeStart).toBe(1);
+                                    expect(contactsStart).toBe(2);
+                                    expect(summaryStart).toBe(4);
 
-            waits(1);
+                                    // Going to same state path but home params differ
+                                    router.go('home.contacts.summary', {
+                                        homeId: 8,
+                                        anotherHomeId: 2,
+                                        contactId: 7,
+                                        summaryId: 6
+                                    });
 
-            runs(function () {
-                expect(homeStart).toBe(1);
-                expect(contactsStart).toBe(2);
-                expect(summaryStart).toBe(3);
-            });
+                                    setTimeout(function () {
+                                        expect(homeStart).toBe(2);
+                                        expect(contactsStart).toBe(3);
+                                        expect(summaryStart).toBe(5);
 
-            // Going to previous state
-            runs(function () {
-                router.go('home.contacts.summary', {
-                    homeId: 1,
-                    anotherHomeId: 2,
-                    contactId: 7,
-                    summaryId: 6
-                });
-            });
+                                        // Going to same state path but contacts params differ
+                                        router.go('home.contacts.summary', {
+                                            homeId: 8,
+                                            anotherHomeId: 2,
+                                            contactId: 9,
+                                            summaryId: 6
+                                        });
 
-            waits(1);
-
-            runs(function () {
-                expect(homeStart).toBe(1);
-                expect(contactsStart).toBe(2);
-                expect(summaryStart).toBe(4);
-            });
-
-            // Going to same state path but home params differ
-            runs(function () {
-                router.go('home.contacts.summary', {
-                    homeId: 8,
-                    anotherHomeId: 2,
-                    contactId: 7,
-                    summaryId: 6
-                });
-            });
-
-            waits(1);
-
-            runs(function () {
-                expect(homeStart).toBe(2);
-                expect(contactsStart).toBe(3);
-                expect(summaryStart).toBe(5);
-            });
-
-            // Going to same state path but contacts params differ
-            runs(function () {
-                router.go('home.contacts.summary', {
-                    homeId: 8,
-                    anotherHomeId: 2,
-                    contactId: 9,
-                    summaryId: 6
-                });
-            });
-
-            waits(1);
-
-            runs(function () {
-                expect(homeStart).toBe(2);
-                expect(contactsStart).toBe(4);
-                expect(summaryStart).toBe(6);
-            });
+                                        setTimeout(function () {
+                                            expect(homeStart).toBe(2);
+                                            expect(contactsStart).toBe(4);
+                                            expect(summaryStart).toBe(6);
+                                            done();
+                                        }, 1);
+                                    }, 1);
+                                }, 1);
+                            }, 1);
+                        }, 1);
+                    }, 1);
+                }, 1);
+            }, 1);
         });
 
 
-        it("should pass params to forwarded child", function () {
+        it("should pass params to forwarded child", function (done) {
             var contactIdParam,
                 forwardedContactIdParam;
 
-            runs(function () {
-                router.configure({controllerProvider: function (name) {
-                    if (name === 'home') {
-                        return {};
-                    }
-                    if (name === 'home.contact') {
-                        return {
-                            start: function (params) {
-                                contactIdParam = params.contactId;
-                            }
-                        };
-                    }
-                    if (name === 'home.contact.summary') {
-                        return {
-                            start: function (params) {
-                                forwardedContactIdParam = params.contactId;
-                            }
-                        };
-                    }
+            router.configure({controllerProvider: function (name) {
+                if (name === 'home') {
                     return {};
-                }});
-                router
-                    .state('home', {controller: 'home'})
-                    .state('home.contact', {
-                        controller: 'home.contact',
-                        params: ['contactId'],
-                        forwardToChild: function () {
-                            return 'home.contact.summary';
+                }
+                if (name === 'home.contact') {
+                    return {
+                        start: function (params) {
+                            contactIdParam = params.contactId;
                         }
-                    })
-                    .state('home.contact.summary', {
-                        controller: 'home.contact.summary'
-                    });
-
-                router.go('home.contact', {
-                    contactId: 555
+                    };
+                }
+                if (name === 'home.contact.summary') {
+                    return {
+                        start: function (params) {
+                            forwardedContactIdParam = params.contactId;
+                        }
+                    };
+                }
+                return {};
+            }});
+            router
+                .state('home', {controller: 'home'})
+                .state('home.contact', {
+                    controller: 'home.contact',
+                    params: ['contactId'],
+                    forwardToChild: function () {
+                        return 'home.contact.summary';
+                    }
+                })
+                .state('home.contact.summary', {
+                    controller: 'home.contact.summary'
                 });
 
-                waits(1);
-
-                runs(function () {
-                    expect(contactIdParam).toBe(555);
-                    expect(forwardedContactIdParam).toBe(555);
-                });
+            router.go('home.contact', {
+                contactId: 555
             });
+
+            setTimeout(function () {
+                expect(contactIdParam).toBe(555);
+                expect(forwardedContactIdParam).toBe(555);
+                done();
+            }, 1);
         });
 
-        it("should alllow forwardToChild to return additional parameters for forwarded child", function () {
+        it("should allow forwardToChild to return additional parameters for forwarded child", function (done) {
             var bParams;
             var cParams;
 
@@ -1318,9 +1232,7 @@ describe("Router", function() {
                 bId: 444
             });
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('b.c');
                 expect(router.getCurrentStateParams()).toEqual({
                     bId: 444,
@@ -1333,7 +1245,8 @@ describe("Router", function() {
                     bId: 444,
                     cId: 555
                 });
-            });
+                done();
+            }, 1);
         });
     });
 
@@ -1344,7 +1257,7 @@ describe("Router", function() {
             router = Ext.create('StateRouter.staterouter.Router');
         });
 
-        it("should set resolved property in controller", function () {
+        it("should set resolved property in controller", function (done) {
             var controller = {
                     resolve: {
                         a: function (resolve) {
@@ -1363,17 +1276,16 @@ describe("Router", function() {
             router.state('state1', {controller: 'DoesntMatter'});
             router.go('state1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(controller.resolved).not.toBeUndefined();
                 expect(controller.resolved).not.toBeNull();
                 expect(controller.resolved.a).toBe('Hello');
                 expect(controller.resolved.b).toBe('World');
-            });
+                done();
+            }, 1);
         });
 
-        it("should set resolved property in child controllers", function () {
+        it("should set resolved property in child controllers", function (done) {
             var controller1 = {
                     resolve: {
                         a: function (resolve) {
@@ -1400,17 +1312,16 @@ describe("Router", function() {
             router.state('state1.child1', {controller: 'controller2'});
             router.go('state1.child1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(controller2.allResolved).not.toBeUndefined();
                 expect(controller2.allResolved).not.toBeNull();
                 expect(controller2.allResolved.state1.a).toBe('Hello');
                 expect(controller2.allResolved.state1.b).toBe('World');
-            });
+                done();
+            }, 1);
         });
 
-        it("should not resolve resolvables unless path changes", function () {
+        it("should not resolve resolvables unless path changes", function (done) {
             var count = 0,
                 controller2Count = 0,
                 controller1 = {
@@ -1454,147 +1365,150 @@ describe("Router", function() {
             router.state('state1.child2', {controller: 'controller3'});
             router.go('state1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(count).toBe(1);
                 router.go('state1.child1');
+
+                setTimeout(function () {
+                    expect(count).toBe(1);
+                    expect(controller2Count).toBe(1);
+                    router.go('state1.child2');
+
+                    setTimeout(function () {
+                        expect(count).toBe(1);
+                        expect(controller2Count).toBe(1);
+                        done();
+                    }, 1);
+                }, 1);
+            }, 1);
+        });
+
+        describe("View Tests", function () {
+
+            var vp;
+
+            beforeEach(function () {
+                vp = Ext.create('Ext.container.Container', {
+                    id: 'vp',
+                    renderTo: Ext.getBody()
+                });
             });
 
-            waits(1);
-
-            runs(function () {
-                expect(count).toBe(1);
-                expect(controller2Count).toBe(1);
-                router.go('state1.child2');
+            afterEach(function () {
+                vp.destroy();
             });
 
-            waits(1);
+            it("should set resolved property in views", function (done) {
+                Ext.define('MainView', {
+                    extend: 'Ext.container.Container',
+                    alias: 'widget.mainview',
 
-            runs(function () {
-                expect(count).toBe(1);
-                expect(controller2Count).toBe(1);
+                    config: {
+                        params: null,
+                        resolved: null,
+                        allResolved: null,
+                        stateName: null
+                    },
+
+                    items: [{
+                        xtype: 'container',
+                        routerView: true
+                    }]
+                });
+
+                Ext.define('ChildView', {
+                    extend: 'Ext.container.Container',
+                    alias: 'widget.childview',
+
+                    myParams: null,
+                    myResolved: null,
+                    myAllResolved: null,
+                    myStateName: null,
+
+                    constructor: function (options) {
+                        this.myParams = options.params;
+                        this.myResolved = options.resolved;
+                        this.myAllResolved = options.allResolved;
+                        this.myStateName = options.stateName;
+                        this.callParent(arguments);
+                    }
+                });
+                var controller1 = {
+                        resolve: {
+                            a: function (resolve) {
+                                resolve('Hello');
+                            },
+                            b: function (resolve) {
+                                resolve('World');
+                            }
+                        }
+                    },
+                    controller2 = {
+                        resolve: {
+                            a: function (resolve) {
+                                resolve('Child');
+                            }
+                        }
+                    };
+
+                router.configure({
+                    controllerProvider: function (name) {
+                        if (name === 'controller1') {
+                            return controller1;
+                        }
+                        if (name === 'controller2') {
+                            return controller2;
+                        }
+                        return null;
+                    },
+                    root: 'vp'
+                });
+                router.state('state1', {
+                    controller: 'controller1',
+                    view: 'MainView'
+                });
+                router.state('state1.child1', {
+                    controller: 'controller2',
+                    view: 'ChildView'
+                });
+                router.go('state1.child1');
+
+                setTimeout(function () {
+                    expect(vp.down('mainview').getResolved()).not.toBeUndefined();
+                    expect(vp.down('mainview').getResolved()).not.toBeNull();
+                    expect(vp.down('mainview').getResolved().a).toBe('Hello');
+                    expect(vp.down('mainview').getResolved().b).toBe('World');
+                    expect(vp.down('mainview').getAllResolved()).not.toBeUndefined();
+                    expect(vp.down('mainview').getAllResolved()).not.toBeNull();
+                    expect(vp.down('mainview').getAllResolved().state1.a).toBe('Hello');
+                    expect(vp.down('mainview').getAllResolved().state1.b).toBe('World');
+                    expect(vp.down('mainview').getStateName()).toBe('state1');
+
+                    expect(vp.down('childview').myResolved).not.toBeUndefined();
+                    expect(vp.down('childview').myResolved).not.toBeNull();
+                    expect(vp.down('childview').myResolved.a).toBe('Child');
+                    expect(vp.down('childview').myAllResolved).not.toBeUndefined();
+                    expect(vp.down('childview').myAllResolved).not.toBeNull();
+                    expect(vp.down('childview').myAllResolved.state1.a).toBe('Hello');
+                    expect(vp.down('childview').myAllResolved.state1.b).toBe('World');
+                    expect(vp.down('childview').myAllResolved['state1.child1'].a).toBe('Child');
+                    expect(vp.down('childview').myStateName).toBe('state1.child1');
+
+                    expect(vp.down('childview').resolved).not.toBeUndefined();
+                    expect(vp.down('childview').resolved).not.toBeNull();
+                    expect(vp.down('childview').resolved.a).toBe('Child');
+                    expect(vp.down('childview').allResolved).not.toBeUndefined();
+                    expect(vp.down('childview').allResolved).not.toBeNull();
+                    expect(vp.down('childview').allResolved.state1.a).toBe('Hello');
+                    expect(vp.down('childview').allResolved.state1.b).toBe('World');
+                    expect(vp.down('childview').allResolved['state1.child1'].a).toBe('Child');
+                    expect(vp.down('childview').stateName).toBe('state1.child1');
+                    done();
+                }, 1);
             });
         });
 
-
-        it("should set resolved property in views", function () {
-            Ext.define('MainView', {
-                extend: 'Ext.container.Container',
-                alias: 'widget.mainview',
-
-                config: {
-                    params: null,
-                    resolved: null,
-                    allResolved: null,
-                    stateName: null
-                },
-
-                items: [{
-                    xtype: 'container',
-                    routerView: true
-                }]
-            });
-
-            Ext.define('ChildView', {
-                extend: 'Ext.container.Container',
-                alias: 'widget.childview',
-
-                myParams: null,
-                myResolved: null,
-                myAllResolved: null,
-                myStateName: null,
-
-                constructor: function (options) {
-                    this.myParams = options.params;
-                    this.myResolved = options.resolved;
-                    this.myAllResolved = options.allResolved;
-                    this.myStateName = options.stateName;
-                    this.callParent(arguments);
-                }
-            });
-            var controller1 = {
-                    resolve: {
-                        a: function (resolve) {
-                            resolve('Hello');
-                        },
-                        b: function (resolve) {
-                            resolve('World');
-                        }
-                    }
-                },
-                controller2 = {
-                    resolve: {
-                        a: function (resolve) {
-                            resolve('Child');
-                        }
-                    }
-                };
-
-
-            var vp = Ext.create('Ext.container.Viewport', {
-                id: 'vp'
-            });
-            router.configure({
-                controllerProvider: function (name) {
-                    if (name === 'controller1') {
-                        return controller1;
-                    }
-                    if (name === 'controller2') {
-                        return controller2;
-                    }
-                    return null;
-                },
-                root: 'vp'
-            });
-            router.state('state1', {
-                controller: 'controller1',
-                view: 'MainView'
-            });
-            router.state('state1.child1', {
-                controller: 'controller2',
-                view: 'ChildView'
-            });
-            router.go('state1.child1');
-
-            waits(1);
-
-            runs(function () {
-                expect(vp.down('mainview').getResolved()).not.toBeUndefined();
-                expect(vp.down('mainview').getResolved()).not.toBeNull();
-                expect(vp.down('mainview').getResolved().a).toBe('Hello');
-                expect(vp.down('mainview').getResolved().b).toBe('World');
-                expect(vp.down('mainview').getAllResolved()).not.toBeUndefined();
-                expect(vp.down('mainview').getAllResolved()).not.toBeNull();
-                expect(vp.down('mainview').getAllResolved().state1.a).toBe('Hello');
-                expect(vp.down('mainview').getAllResolved().state1.b).toBe('World');
-                expect(vp.down('mainview').getStateName()).toBe('state1');
-
-                expect(vp.down('childview').myResolved).not.toBeUndefined();
-                expect(vp.down('childview').myResolved).not.toBeNull();
-                expect(vp.down('childview').myResolved.a).toBe('Child');
-                expect(vp.down('childview').myAllResolved).not.toBeUndefined();
-                expect(vp.down('childview').myAllResolved).not.toBeNull();
-                expect(vp.down('childview').myAllResolved.state1.a).toBe('Hello');
-                expect(vp.down('childview').myAllResolved.state1.b).toBe('World');
-                expect(vp.down('childview').myAllResolved['state1.child1'].a).toBe('Child');
-                expect(vp.down('childview').myStateName).toBe('state1.child1');
-
-                expect(vp.down('childview').resolved).not.toBeUndefined();
-                expect(vp.down('childview').resolved).not.toBeNull();
-                expect(vp.down('childview').resolved.a).toBe('Child');
-                expect(vp.down('childview').allResolved).not.toBeUndefined();
-                expect(vp.down('childview').allResolved).not.toBeNull();
-                expect(vp.down('childview').allResolved.state1.a).toBe('Hello');
-                expect(vp.down('childview').allResolved.state1.b).toBe('World');
-                expect(vp.down('childview').allResolved['state1.child1'].a).toBe('Child');
-                expect(vp.down('childview').stateName).toBe('state1.child1');
-            });
-        });
-
-
-
-        it("should pass resolved to forwardToChild method", function () {
+        it("should pass resolved to forwardToChild method", function (done) {
             var controller1 = {
                     resolve: {
                         a: function (resolve) {
@@ -1629,14 +1543,13 @@ describe("Router", function() {
             router.state('state1.child1', {controller: 'controller2'});
             router.go('state1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('state1.child1');
-            });
+                done();
+            }, 1);
         });
 
-        it("should keep resolved when navigating to parent", function () {
+        it("should keep resolved when navigating to parent", function (done) {
             var controller1 = {
                     resolve: {
                         a: function (resolve) {
@@ -1665,12 +1578,11 @@ describe("Router", function() {
             router.state('state1.child1', {controller: 'controller2'});
             router.go('state1.child1');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('state1.child1');
                 expect(router.getCurrentState()).toBe('state1.child1');
-            });
+                done();
+            }, 1);
         });
     });
 
@@ -1680,31 +1592,37 @@ describe("Router", function() {
 
         beforeEach(function() {
             router = Ext.create('StateRouter.staterouter.Router');
-            Ext.History.clearListeners();
         });
 
-        it("should transition to simple state on token change", function () {
+        afterEach(function () {
+            Ext.History.clearListeners();
+            Ext.History.add('');
+        });
+
+        it("should transition to simple state on token change", function (done) {
             router.state('home', {
                 url: '/home'
             });
 
             router.onHistoryChanged('/home');
 
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
+//                Ext.History.fireEvent('change');
 
-            waits(1);
+                setTimeout(function () {
+                    // Simulate address bar changing
+                    Ext.History.fireEvent('change');
 
-            runs(function () {
-                expect(router.getCurrentState()).toBe('home');
-            });
+                    setTimeout(function () {
+                        expect(router.getCurrentState()).toBe('home');
+                        done();
+                    }, 1);
+                }, 1);
+            }, 1);
         });
 
-        it("should intercept invalid URLs and redirect to a state with a simple name", function () {
+        it("should intercept invalid URLs and redirect to a state with a simple name", function (done) {
             router.configure({
                 unknownUrlHandler: function () {
                     return "about";
@@ -1717,26 +1635,17 @@ describe("Router", function() {
                 url: '/about'
             });
 
-            runs(function () {
-                router.onHistoryChanged('/hello');
-            });
+            router.onHistoryChanged('/hello');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('about');
-            });
+                done();
+            }, 1);
         });
 
-        it("should intercept invalid URLs and redirect using an object with transition properties", function () {
+        it("should intercept invalid URLs and redirect using an object with transition properties", function (done) {
             router.configure({
                 unknownUrlHandler: function () {
                     return {
@@ -1760,87 +1669,74 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/main/123/c1');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('main.c1');
                 router.onHistoryChanged('/main/123/hello');
-            });
-
-            waits(1);
-
-            runs(function () {
                 // Simulate address bar changing
                 Ext.History.fireEvent('change');
-            });
 
-            waits(1);
-
-            runs(function () {
-                expect(router.getCurrentState()).toBe('main.c2');
-                expect(router.getCurrentStateParams()).toEqual({
-                    sort: 'name',
-                    id: '123'
-                });
-            });
+                setTimeout(function () {
+                    expect(router.getCurrentState()).toBe('main.c2');
+                    expect(router.getCurrentStateParams()).toEqual({
+                        sort: 'name',
+                        id: '123'
+                    });
+                    done();
+                }, 1);
+            }, 1);
         });
-
-        it("should allow you to keep the current URL if state does not define URL", function () {
-            // TODO: This test does not actually work as it seems there's no way to obtain the current history token
-            router.state('home', {
-                url: '/home'
-            });
-            router.state('home.wizard', {
-                url: '/wizard',
-                forwardToChild: function () {
-                    return 'home.wizard.step1';
-                }
-            });
-            router.state('home.wizard.step1', {
-                url: '/step1'
-            });
-            router.state('home.wizard.step2', {
-            });
-
-            runs(function () {
-                router.go('home.wizard');
-            });
-
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
-//                expect(Ext.History.getToken()).toBe('/home/wizard/step1');
-                expect(router.getCurrentState()).toBe('home.wizard.step1');
-            });
-
-            runs(function () {
-                router.go('home.wizard.step2', {}, { keepUrl: true });
-            });
-
-            waits(1);
-
-            runs(function () {
-//                expect(Ext.History.getToken()).toBe('/home/wizard/step2');
-                expect(router.getCurrentState()).toBe('home.wizard.step2');
-            });
-        });
-
-        it("should transition to child state on token change", function () {
+//
+//        it("should allow you to keep the current URL if state does not define URL", function () {
+//            // TODO: This test does not actually work as it seems there's no way to obtain the current history token
+//            router.state('home', {
+//                url: '/home'
+//            });
+//            router.state('home.wizard', {
+//                url: '/wizard',
+//                forwardToChild: function () {
+//                    return 'home.wizard.step1';
+//                }
+//            });
+//            router.state('home.wizard.step1', {
+//                url: '/step1'
+//            });
+//            router.state('home.wizard.step2', {
+//            });
+//
+//            runs(function () {
+//                router.go('home.wizard');
+//            });
+//
+//            waits(1);
+//
+//            runs(function () {
+//                // Simulate address bar changing
+//                Ext.History.fireEvent('change');
+//            });
+//
+//            waits(1);
+//
+//            runs(function () {
+////                expect(Ext.History.getToken()).toBe('/home/wizard/step1');
+//                expect(router.getCurrentState()).toBe('home.wizard.step1');
+//            });
+//
+//            runs(function () {
+//                router.go('home.wizard.step2', {}, { keepUrl: true });
+//            });
+//
+//            waits(1);
+//
+//            runs(function () {
+////                expect(Ext.History.getToken()).toBe('/home/wizard/step2');
+//                expect(router.getCurrentState()).toBe('home.wizard.step2');
+//            });
+//        });
+//
+        it("should transition to child state on token change", function (done) {
             router.state('home', {
                 url: '/home'
             });
@@ -1849,22 +1745,16 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home/contact');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('home.contact');
-            });
+                done();
+            }, 1);
         });
 
-        it("should transition to child state and set param on token change with param", function () {
+        it("should transition to child state and set param on token change with param", function (done) {
             router.state('home', {
                 url: '/home'
             });
@@ -1873,23 +1763,17 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home/contact/355');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('home.contact');
                 expect(router.getCurrentStateParams().id).toBe('355');
-            });
+                done();
+            }, 1);
         });
 
-        it("should transition to child state and set multiple params", function () {
+        it("should transition to child state and set multiple params", function (done) {
             router.state('home', {
                 url: '/home'
             });
@@ -1898,24 +1782,18 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home/contact/355/Jones');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('home.contact');
                 expect(router.getCurrentStateParams().id).toBe('355');
                 expect(router.getCurrentStateParams().name).toBe('Jones');
-            });
+                done();
+            }, 1);
         });
 
-        it("should transition to child state and set all params", function () {
+        it("should transition to child state and set all params", function (done) {
             router.state('home', {
                 url: '/home'
             });
@@ -1927,70 +1805,52 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home/contact/355/Jones/address/edit/10');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('home.contact.address');
                 expect(router.getCurrentStateParams().id).toBe('355');
                 expect(router.getCurrentStateParams().name).toBe('Jones');
                 expect(router.getCurrentStateParams().addressId).toBe('10');
-            });
+                done();
+            }, 1);
         });
 
-        it("should transition to state and set query params", function () {
+        it("should transition to state and set query params", function (done) {
             router.state('home', {
                 url: '/home?min'
             });
 
             router.onHistoryChanged('/home?min=10');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('home');
                 expect(router.getCurrentStateParams().min).toBe('10');
-            });
+                done();
+            }, 1);
         });
 
-        it("should transition to state and set multiple query params", function () {
+        it("should transition to state and set multiple query params", function (done) {
             router.state('home', {
                 url: '/home?min&max'
             });
 
             router.onHistoryChanged('/home?max=100&min=10');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('home');
                 expect(router.getCurrentStateParams().min).toBe('10');
                 expect(router.getCurrentStateParams().max).toBe('100');
-            });
+                done();
+            }, 1);
         });
 
-        it("should transition to child state and all query params", function () {
+        it("should transition to child state and all query params", function (done) {
             router.state('home', {
                 url: '/home?min&max'
             });
@@ -2000,17 +1860,10 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home/contacts?enabled&max=100&min=10&sortBy=name&hidden=false');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('home.contacts');
                 expect(router.getCurrentStateParams().min).toBe('10');
                 expect(router.getCurrentStateParams().max).toBe('100');
@@ -2018,10 +1871,11 @@ describe("Router", function() {
                 expect(router.getCurrentStateParams().sortBy).toBe('name');
                 expect(router.getCurrentStateParams().hidden).not.toBe('false');
                 expect(router.getCurrentStateParams().hidden).toBe(false);
-            });
+                done();
+            }, 1);
         });
 
-        it("should transition to child state even if parent has no url", function () {
+        it("should transition to child state even if parent has no url", function (done) {
             router.state('home', {
             });
             router.state('home.contact', {
@@ -2029,22 +1883,17 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/contact');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('home.contact');
-            });
+                done();
+            }, 1);
         });
 
-        it("should allow custom regex for params", function () {
+        // This test isn't that useful since we have to simulate change events (is regex really working?)
+        it("should allow custom regex for params", function (done) {
             router.state('home', {
                 url: '/home'
             });
@@ -2063,70 +1912,48 @@ describe("Router", function() {
             });
 
             router.onHistoryChanged('/home/contact///address/edit/b');
+            // Simulate address bar changing
+            Ext.History.fireEvent('change');
 
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
+            setTimeout(function () {
                 expect(router.getCurrentState()).toBe('home.contact.address');
                 expect(router.getCurrentStateParams().id).toBe('');
                 expect(router.getCurrentStateParams().name).toBe('');
                 expect(router.getCurrentStateParams().addressId).toBe('b');
-            });
 
-            runs(function() {
                 router.onHistoryChanged('/home/contact/a//address/edit/b');
-            });
 
-            waits(1);
+                setTimeout(function () {
+                    // The state hasn't changed since 'a' is invalid
+                    expect(router.getCurrentState()).toBe('home.contact.address');
+                    expect(router.getCurrentStateParams().id).toBe('');
+                    expect(router.getCurrentStateParams().name).toBe('');
+                    expect(router.getCurrentStateParams().addressId).toBe('b');
 
-            // The state hasn't changed since 'a' is invalid
-            runs(function () {
-                expect(router.getCurrentState()).toBe('home.contact.address');
-                expect(router.getCurrentStateParams().id).toBe('');
-                expect(router.getCurrentStateParams().name).toBe('');
-                expect(router.getCurrentStateParams().addressId).toBe('b');
-            });
+                    router.onHistoryChanged('/home/contact/0/a/address/edit/');
 
-            runs(function() {
-                router.onHistoryChanged('/home/contact/0/a/address/edit/');
-            });
+                    setTimeout(function () {
+                        // The state hasn't changed since addressId requires min 1 char
+                        expect(router.getCurrentState()).toBe('home.contact.address');
+                        expect(router.getCurrentStateParams().id).toBe('');
+                        expect(router.getCurrentStateParams().name).toBe('');
+                        expect(router.getCurrentStateParams().addressId).toBe('b');
 
-            waits(1);
+                        router.onHistoryChanged('/home/contact/111/aaa/address/edit/ccc');
+                        // Simulate address bar changing
+                        Ext.History.fireEvent('change');
 
-            // The state hasn't changed since addressId requires min 1 char
-            runs(function () {
-                expect(router.getCurrentState()).toBe('home.contact.address');
-                expect(router.getCurrentStateParams().id).toBe('');
-                expect(router.getCurrentStateParams().name).toBe('');
-                expect(router.getCurrentStateParams().addressId).toBe('b');
-            });
+                        setTimeout(function () {
+                            expect(router.getCurrentState()).toBe('home.contact.address');
+                            expect(router.getCurrentStateParams().id).toBe('111');
+                            expect(router.getCurrentStateParams().name).toBe('aaa');
+                            expect(router.getCurrentStateParams().addressId).toBe('ccc');
+                            done();
+                        }, 1);
+                    }, 1);
 
-            runs(function() {
-                router.onHistoryChanged('/home/contact/111/aaa/address/edit/ccc');
-            });
-
-            waits(1);
-
-            runs(function () {
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
-            });
-
-            waits(1);
-
-            runs(function () {
-                expect(router.getCurrentState()).toBe('home.contact.address');
-                expect(router.getCurrentStateParams().id).toBe('111');
-                expect(router.getCurrentStateParams().name).toBe('aaa');
-                expect(router.getCurrentStateParams().addressId).toBe('ccc');
-            });
+                }, 1);
+            }, 1);
         });
     });
 

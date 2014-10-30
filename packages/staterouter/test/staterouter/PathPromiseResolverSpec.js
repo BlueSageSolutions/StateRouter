@@ -1,35 +1,30 @@
 describe("PathPromiseResolver", function() {
 
     var resolver,
-        stateManager;
+        stateManager,
+        stateViewManager;
 
     beforeEach(function() {
         stateManager = Ext.create('StateRouter.staterouter.StateManager');
+        stateViewManager = Ext.create('StateRouter.staterouter.StateViewManager');
+        stateManager.stateViewManager = stateViewManager;
         resolver = Ext.create('StateRouter.staterouter.PathPromiseResolver');
         resolver.stateManager = stateManager;
     });
 
-    it("should handle empty path", function() {
-        var path = [],
-            complete = false;
+    it("should handle empty path", function(done) {
+        var path = [];
 
         var p = resolver.createResolvePromise(path, 0);
         p.then(function () {
-            complete = true;
-        });
-
-        waits(1);
-
-        runs(function () {
-
-            expect(complete).toBe(true);
+            expect(true).toBe(true);
+            done();
         });
     });
 
-    it("should resolve a single path with no resolvables", function() {
+    it("should resolve a single path with no resolvables", function(done) {
         var path = [],
-            controller = {},
-            complete = false;
+            controller = {};
 
         stateManager.controllerProvider = function () {
             return controller;
@@ -45,17 +40,12 @@ describe("PathPromiseResolver", function() {
 
         var p = resolver.createResolvePromise(path, 0);
         p.then(function () {
-            complete = true;
-        });
-
-        waits(1);
-
-        runs(function () {
-            expect(complete).toBe(true);
+            expect(true).toBe(true);
+            done();
         });
     });
 
-    it("should resolve a single path with resolvables", function() {
+    it("should resolve a single path with resolvables", function(done) {
         var path = [],
             controller = {
                 resolve: {
@@ -81,11 +71,6 @@ describe("PathPromiseResolver", function() {
 
         var p = resolver.createResolvePromise(path, 0);
         p.then(function () {
-        });
-
-        waits(1);
-
-        runs(function () {
             expect(path[0].resolved).not.toBeUndefined();
             expect(path[0].resolved.one).toBe('one');
             expect(path[0].resolved.two).toBe('two');
@@ -100,10 +85,11 @@ describe("PathPromiseResolver", function() {
             expect(controller.allResolved.main).not.toBeUndefined();
             expect(controller.allResolved.main.one).toBe('one');
             expect(controller.allResolved.main.two).toBe('two');
+            done();
         });
     });
 
-    it("should not resolve kept states", function() {
+    it("should not resolve kept states", function(done) {
         var path = [],
             count = 0,
             newCount = 0,
@@ -152,19 +138,14 @@ describe("PathPromiseResolver", function() {
 
         var p = resolver.createResolvePromise(path, 1);
         p.then(function () {
-        });
-
-        waits(1);
-
-        runs(function () {
             expect(count).toBe(0);
             expect(newCount).toBe(1);
+            done();
         });
     });
 
-    it("should resolve a path containing a null controller", function() {
+    it("should resolve a path containing a null controller", function(done) {
         var path,
-            complete = false,
             a = {
                 resolve: {
                     one: function (resolve) {
@@ -209,13 +190,6 @@ describe("PathPromiseResolver", function() {
 
         var p = resolver.createResolvePromise(path, 0);
         p.then(function () {
-            complete = true;
-        });
-
-        waits(1);
-
-        runs(function () {
-            expect(complete).toBe(true);
             expect(path[0].resolved).toEqual({
                 one: 'one',
                 two: 'two'
@@ -271,10 +245,11 @@ describe("PathPromiseResolver", function() {
                     three: 'three'
                 }
             });
+            done();
         });
     });
 
-    it("should pass resolve results to next child resolves", function() {
+    it("should pass resolve results to next child resolves", function(done) {
         var oldPath,
             newPath,
             previouslyResolvedA1,
@@ -332,17 +307,13 @@ describe("PathPromiseResolver", function() {
 
         var p = resolver.createResolvePromise(oldPath, 0);
         p = p.then(function () {
-        });
-
-        waits(1);
-
-        runs(function () {
             expect(controllerA.resolved.one).toBe('one');
             expect(controllerA.resolved.two).toBe('two');
             expect(controllerB.resolved).toBeUndefined();
             expect(controllerB.resolved).toBeUndefined();
             expect(previouslyResolvedA1).toEqual({});
             expect(previouslyResolvedA2).toEqual({});
+        }).then(function () {
 
             newPath = [
                 Ext.create('StateRouter.staterouter.PathNode', {
@@ -360,37 +331,33 @@ describe("PathPromiseResolver", function() {
 
             p = resolver.createResolvePromise(newPath, 1);
             p = p.then(function () {
-            });
-        });
-
-        waits(1);
-
-        runs(function () {
-            expect(controllerA.resolved.one).toBe('one');
-            expect(controllerA.resolved.two).toBe('two');
-            expect(controllerB.resolved.three).toBe('three');
-            expect(controllerC.resolved.four).toBe('four');
-            expect(previouslyResolvedA1).toEqual({});
-            expect(previouslyResolvedA2).toEqual({});
-            expect(previouslyResolvedB).toEqual({
-                a: {
-                    one: 'one',
-                    two: 'two'
-                }
-            });
-            expect(previouslyResolvedC).toEqual({
-                a: {
-                    one: 'one',
-                    two: 'two'
-                },
-                'a.b': {
-                    three: 'three'
-                }
+                expect(controllerA.resolved.one).toBe('one');
+                expect(controllerA.resolved.two).toBe('two');
+                expect(controllerB.resolved.three).toBe('three');
+                expect(controllerC.resolved.four).toBe('four');
+                expect(previouslyResolvedA1).toEqual({});
+                expect(previouslyResolvedA2).toEqual({});
+                expect(previouslyResolvedB).toEqual({
+                    a: {
+                        one: 'one',
+                        two: 'two'
+                    }
+                });
+                expect(previouslyResolvedC).toEqual({
+                    a: {
+                        one: 'one',
+                        two: 'two'
+                    },
+                    'a.b': {
+                        three: 'three'
+                    }
+                });
+                done();
             });
         });
     });
 
-    it("should pass stateParams to resolve", function() {
+    it("should pass stateParams to resolve", function(done) {
         var a = {
             resolve: {
                 a: function (resolve, reject, stateParams) {
@@ -454,8 +421,7 @@ describe("PathPromiseResolver", function() {
         ];
 
         resolver.createResolvePromise(path, 0).then(function () {
+            done();
         });
-
-        waits(1);
     });
 });

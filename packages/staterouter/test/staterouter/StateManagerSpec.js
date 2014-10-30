@@ -5,7 +5,7 @@ describe('StateManager', function() {
         manager = Ext.create('StateRouter.staterouter.StateManager');
     });
 
-    xit('should allow states to have a URL with query params', function () {
+    it('should allow states to have a URL with query params', function () {
         var stateDef;
 
         manager.register('a', {
