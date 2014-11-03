@@ -1589,9 +1589,23 @@ describe("Router", function() {
     describe("History tests", function () {
 
         var router;
+        var app;
+        var appIndex = 0;
 
-        beforeEach(function() {
-            router = Ext.create('StateRouter.staterouter.Router');
+        beforeEach(function(done) {
+            Ext.application({
+                name: 'MyApp' + appIndex,
+                launch: function() {
+                    app = window['MyApp' + appIndex].getApplication();
+                    router = Ext.create('StateRouter.staterouter.Router');
+                    router.configure({
+                        app: app
+                    });
+                    appIndex++;
+                    done();
+                }
+            });
+
         });
 
         afterEach(function () {
@@ -1604,22 +1618,12 @@ describe("Router", function() {
                 url: '/home'
             });
 
-            router.onHistoryChanged('/home');
+            app.on(StateRouter.STATE_CHANGED, function () {
+                expect(router.getCurrentState()).toBe('home');
+                done();
+            }, { single: true });
 
-            setTimeout(function () {
-                // Simulate address bar changing
-//                Ext.History.fireEvent('change');
-
-                setTimeout(function () {
-                    // Simulate address bar changing
-                    Ext.History.fireEvent('change');
-
-                    setTimeout(function () {
-                        expect(router.getCurrentState()).toBe('home');
-                        done();
-                    }, 1);
-                }, 1);
-            }, 1);
+            Ext.History.add('/home');
         });
 
         it("should intercept invalid URLs and redirect to a state with a simple name", function (done) {
@@ -1635,14 +1639,12 @@ describe("Router", function() {
                 url: '/about'
             });
 
-            router.onHistoryChanged('/hello');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('about');
                 done();
-            }, 1);
+            }, null, { single: true });
+
+            Ext.History.add('/hello');
         });
 
         it("should intercept invalid URLs and redirect using an object with transition properties", function (done) {
@@ -1668,25 +1670,21 @@ describe("Router", function() {
                 url: '/c2?sort'
             });
 
-            router.onHistoryChanged('/main/123/c1');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('main.c1');
-                router.onHistoryChanged('/main/123/hello');
-                // Simulate address bar changing
-                Ext.History.fireEvent('change');
+                Ext.History.add('/main/123/hello');
 
-                setTimeout(function () {
+                app.on(StateRouter.STATE_CHANGED, function () {
                     expect(router.getCurrentState()).toBe('main.c2');
                     expect(router.getCurrentStateParams()).toEqual({
                         sort: 'name',
                         id: '123'
                     });
                     done();
-                }, 1);
-            }, 1);
+                }, null, { single: true });
+            }, null, { single: true });
+
+            Ext.History.add('/main/123/c1');
         });
 //
 //        it("should allow you to keep the current URL if state does not define URL", function () {
@@ -1744,14 +1742,12 @@ describe("Router", function() {
                 url: '/contact'
             });
 
-            router.onHistoryChanged('/home/contact');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('home.contact');
                 done();
-            }, 1);
+            }, { single: true });
+
+            Ext.History.add('/home/contact');
         });
 
         it("should transition to child state and set param on token change with param", function (done) {
@@ -1762,15 +1758,13 @@ describe("Router", function() {
                 url: '/contact/:id'
             });
 
-            router.onHistoryChanged('/home/contact/355');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('home.contact');
                 expect(router.getCurrentStateParams().id).toBe('355');
                 done();
-            }, 1);
+            }, { single: true });
+
+            Ext.History.add('/home/contact/355');
         });
 
         it("should transition to child state and set multiple params", function (done) {
@@ -1781,16 +1775,14 @@ describe("Router", function() {
                 url: '/contact/:id/:name'
             });
 
-            router.onHistoryChanged('/home/contact/355/Jones');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('home.contact');
                 expect(router.getCurrentStateParams().id).toBe('355');
                 expect(router.getCurrentStateParams().name).toBe('Jones');
                 done();
-            }, 1);
+            }, { single: true });
+
+            Ext.History.add('/home/contact/355/Jones');
         });
 
         it("should transition to child state and set all params", function (done) {
@@ -1804,17 +1796,15 @@ describe("Router", function() {
                 url: '/address/edit/:addressId'
             });
 
-            router.onHistoryChanged('/home/contact/355/Jones/address/edit/10');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('home.contact.address');
                 expect(router.getCurrentStateParams().id).toBe('355');
                 expect(router.getCurrentStateParams().name).toBe('Jones');
                 expect(router.getCurrentStateParams().addressId).toBe('10');
                 done();
-            }, 1);
+            }, { single: true });
+
+            Ext.History.add('/home/contact/355/Jones/address/edit/10');
         });
 
         it("should transition to state and set query params", function (done) {
@@ -1822,15 +1812,13 @@ describe("Router", function() {
                 url: '/home?min'
             });
 
-            router.onHistoryChanged('/home?min=10');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('home');
                 expect(router.getCurrentStateParams().min).toBe('10');
                 done();
-            }, 1);
+            }, { single: true });
+
+            Ext.History.add('/home?min=10');
         });
 
         it("should transition to state and set multiple query params", function (done) {
@@ -1838,16 +1826,14 @@ describe("Router", function() {
                 url: '/home?min&max'
             });
 
-            router.onHistoryChanged('/home?max=100&min=10');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('home');
                 expect(router.getCurrentStateParams().min).toBe('10');
                 expect(router.getCurrentStateParams().max).toBe('100');
                 done();
-            }, 1);
+            }, { single: true });
+
+            Ext.History.add('/home?max=100&min=10');
         });
 
         it("should transition to child state and all query params", function (done) {
@@ -1859,11 +1845,7 @@ describe("Router", function() {
                 url: '/contacts?enabled&sortBy&hidden'
             });
 
-            router.onHistoryChanged('/home/contacts?enabled&max=100&min=10&sortBy=name&hidden=false');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('home.contacts');
                 expect(router.getCurrentStateParams().min).toBe('10');
                 expect(router.getCurrentStateParams().max).toBe('100');
@@ -1872,7 +1854,9 @@ describe("Router", function() {
                 expect(router.getCurrentStateParams().hidden).not.toBe('false');
                 expect(router.getCurrentStateParams().hidden).toBe(false);
                 done();
-            }, 1);
+            }, { single: true });
+
+            Ext.History.add('/home/contacts?enabled&max=100&min=10&sortBy=name&hidden=false');
         });
 
         it("should transition to child state even if parent has no url", function (done) {
@@ -1882,14 +1866,12 @@ describe("Router", function() {
                 url: '/contact'
             });
 
-            router.onHistoryChanged('/contact');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('home.contact');
                 done();
-            }, 1);
+            }, { single: true });
+
+            Ext.History.add('/contact');
         });
 
         // This test isn't that useful since we have to simulate change events (is regex really working?)
@@ -1911,17 +1893,13 @@ describe("Router", function() {
                 }
             });
 
-            router.onHistoryChanged('/home/contact///address/edit/b');
-            // Simulate address bar changing
-            Ext.History.fireEvent('change');
-
-            setTimeout(function () {
+            app.on(StateRouter.STATE_CHANGED, function () {
                 expect(router.getCurrentState()).toBe('home.contact.address');
                 expect(router.getCurrentStateParams().id).toBe('');
                 expect(router.getCurrentStateParams().name).toBe('');
                 expect(router.getCurrentStateParams().addressId).toBe('b');
 
-                router.onHistoryChanged('/home/contact/a//address/edit/b');
+                Ext.History.add('/home/contact/a//address/edit/b');
 
                 setTimeout(function () {
                     // The state hasn't changed since 'a' is invalid
@@ -1929,8 +1907,7 @@ describe("Router", function() {
                     expect(router.getCurrentStateParams().id).toBe('');
                     expect(router.getCurrentStateParams().name).toBe('');
                     expect(router.getCurrentStateParams().addressId).toBe('b');
-
-                    router.onHistoryChanged('/home/contact/0/a/address/edit/');
+                    Ext.History.add('/home/contact/0/a/address/edit/');
 
                     setTimeout(function () {
                         // The state hasn't changed since addressId requires min 1 char
@@ -1939,21 +1916,24 @@ describe("Router", function() {
                         expect(router.getCurrentStateParams().name).toBe('');
                         expect(router.getCurrentStateParams().addressId).toBe('b');
 
-                        router.onHistoryChanged('/home/contact/111/aaa/address/edit/ccc');
-                        // Simulate address bar changing
-                        Ext.History.fireEvent('change');
-
-                        setTimeout(function () {
+                        app.on(StateRouter.STATE_CHANGED, function () {
+                            console.log('here4');
                             expect(router.getCurrentState()).toBe('home.contact.address');
                             expect(router.getCurrentStateParams().id).toBe('111');
                             expect(router.getCurrentStateParams().name).toBe('aaa');
                             expect(router.getCurrentStateParams().addressId).toBe('ccc');
                             done();
-                        }, 1);
-                    }, 1);
+                        }, this, { single: true });
 
-                }, 1);
-            }, 1);
+                        setTimeout(function () {
+                            Ext.History.add('/home/contact/111/aaa/address/edit/ccc');
+                        }, 100);
+                    }, 100);
+                }, 100);
+
+            }, this, { single: true });
+
+            Ext.History.add('/home/contact///address/edit/b');
         });
     });
 

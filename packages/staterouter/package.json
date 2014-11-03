@@ -7,6 +7,15 @@
     "version": "0.5.4",
     "compatVersion": "0.4.3",
     "format": "1",
+    "slicer": {
+        "js": [
+            {
+                "path": "${package.dir}/sass/example/custom.js",
+                "isWidgetManifest": true
+            }
+        ]
+    },
+    "output": "${package.dir}/build",
     "local": true,
     "requires": []
 }
