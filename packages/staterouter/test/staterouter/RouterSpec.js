@@ -361,7 +361,6 @@ describe("Router", function() {
             });
 
             router.go('state1').then(function (success) {
-                console.log('SUCCESS: ' + success);
             }, function () {
                 expect(errorObj).not.toBeUndefined();
                 expect(errorObj).not.toBeNull();
@@ -1020,7 +1019,6 @@ describe("Router", function() {
                 expect(summaryStart).toBe(1);
 
                 // Going to same state, but summary has diff params
-                console.log('Going to same state, but summary has diff params');
                 return router.go('home.contacts.summary', {
                     homeId: 1,
                     anotherHomeId: 2,
@@ -1033,7 +1031,6 @@ describe("Router", function() {
                 expect(summaryStart).toBe(2);
 
                 // Going to same state, but contact and summary has diff params
-                console.log('Going to same state, but contact and summary has diff params');
                 return router.go('home.contacts.summary', {
                     homeId: 1,
                     anotherHomeId: 2,
@@ -1046,7 +1043,6 @@ describe("Router", function() {
                 expect(summaryStart).toBe(3);
 
                 // Going to same exact state
-                console.log('Going to same exact state')
                 return router.go('home.contacts.summary', {
                     homeId: 1,
                     anotherHomeId: 2,
@@ -1059,7 +1055,6 @@ describe("Router", function() {
                 expect(summaryStart).toBe(3);
 
                 // Going to ancestor
-                console.log('Going to ancestor')
                 return router.go('home.contacts', {
                     homeId: 1,
                     anotherHomeId: 2,
@@ -1072,7 +1067,6 @@ describe("Router", function() {
                 expect(summaryStart).toBe(3);
 
                 // Going to previous state
-                console.log('Going to previous state')
                 return router.go('home.contacts.summary', {
                     homeId: 1,
                     anotherHomeId: 2,
@@ -1085,7 +1079,6 @@ describe("Router", function() {
                 expect(summaryStart).toBe(4);
 
                 // Going to same state path but home params differ
-                console.log('Going to same state path but home params differ')
                 return router.go('home.contacts.summary', {
                     homeId: 8,
                     anotherHomeId: 2,
@@ -1098,7 +1091,6 @@ describe("Router", function() {
                 expect(summaryStart).toBe(5);
 
                 // Going to same state path but contacts params differ
-                console.log('Going to same state path but contacts params differ')
                 return router.go('home.contacts.summary', {
                     homeId: 8,
                     anotherHomeId: 2,

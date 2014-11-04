@@ -264,6 +264,7 @@ Ext.define('StateRouter.staterouter.Router', {
             force = Ext.isObject(options) && options.force === true,
             keepUrl = Ext.isObject(options) && options.keepUrl === true;
 
+        var readyPromise = new RSVP.Promise(function (resolve) { resolve(); });
         var didNotTransitionPromise = new RSVP.Promise(function (resolve) { resolve(false); });
 
         if (options) {
@@ -279,160 +280,160 @@ Ext.define('StateRouter.staterouter.Router', {
             }
         }
 
-        if (!me.ready) {
-            // TODO: NOVEMBER 1, 2014 ---- CHANGE THIS TO A PROMISE AND WE CALL .then TO PROCEED WITH REST OF FUNCTION
-            // We have at least one state definition with a URL config, and Ext.History is not ready yet.
-            // Wait until we receive the ready event, then call transitionTo.
-            Ext.History.on('ready', function () {
-
-                // TODO: If transitionTo returns a promise in the future, this may cause problems since we're
-                // returning early here (we're not returning the promise).
-                me.transitionTo(newStateName, stateParams, options);
-            }, me, { single: true });
-            return didNotTransitionPromise;
-        }
-
         if (me.transitioning) {
             return didNotTransitionPromise;
         }
 
-        stateParams = stateParams || {};
-
-        if (!this.stateManager.hasStateDefinition(newStateName)) {
-            throw new Error("Unknown state: '" + newStateName + "'");
+        if (!me.ready) {
+            readyPromise = new RSVP.Promise(function (resolve) {
+                // We have at least one state definition with a URL config, and Ext.History is not ready yet.
+                // Wait until we receive the ready event
+                Ext.History.on('ready', function () {
+                    resolve();
+                }, me, { single: true });
+            });
         }
 
-        // Build the path to the new state
-        me.toPath = me.buildToPath(newStateName, stateParams, options);
+        return readyPromise.then(function () {
 
-        transitionEvent = {
-            options: options,
-            toState: newStateName,
-            toParams: stateParams,
-            fromState: null,
-            fromParams: null
-        };
+            stateParams = stateParams || {};
 
-        me.keep = 0;
-
-        // Next, iterate through the current path to see which PathNodes we can keep.
-        // keep in this context means the path up to the "keep" point is identical to
-        // the previous state so we do not have to stop/start controllers up to that
-        // point.
-        if (me.currentPath !== null) {
-            if (reload === false && me.toPath.isEqual(me.currentPath)) {
-                Ext.log('Asked to go to the same place');
-                return didNotTransitionPromise;
+            if (!me.stateManager.hasStateDefinition(newStateName)) {
+                throw new Error("Unknown state: '" + newStateName + "'");
             }
 
-            this.calculateKeepPoint(reload);
+            // Build the path to the new state
+            me.toPath = me.buildToPath(newStateName, stateParams, options);
 
-            transitionEvent.fromState = me.getCurrentState();
-            transitionEvent.fromParams = me.getCurrentStateParams();
+            transitionEvent = {
+                options: options,
+                toState: newStateName,
+                toParams: stateParams,
+                fromState: null,
+                fromParams: null
+            };
 
-            // Allow states to cancel state transition (unless we're forcefully going to this state)
-            if (force === false && !me.notifyAll(StateRouter.STATE_CHANGE_REQUEST, transitionEvent)) {
+            me.keep = 0;
 
-                // Let running controllers know it was canceled
-                me.notifyAll(StateRouter.STATE_CHANGE_CANCELED, transitionEvent);
-                return didNotTransitionPromise;
+            // Next, iterate through the current path to see which PathNodes we can keep.
+            // keep in this context means the path up to the "keep" point is identical to
+            // the previous state so we do not have to stop/start controllers up to that
+            // point.
+            if (me.currentPath !== null) {
+                if (reload === false && me.toPath.isEqual(me.currentPath)) {
+                    Ext.log('Asked to go to the same place');
+                    return didNotTransitionPromise;
+                }
+
+                me.calculateKeepPoint(reload);
+
+                transitionEvent.fromState = me.getCurrentState();
+                transitionEvent.fromParams = me.getCurrentStateParams();
+
+                // Allow states to cancel state transition (unless we're forcefully going to this state)
+                if (force === false && !me.notifyAll(StateRouter.STATE_CHANGE_REQUEST, transitionEvent)) {
+
+                    // Let running controllers know it was canceled
+                    me.notifyAll(StateRouter.STATE_CHANGE_CANCELED, transitionEvent);
+                    return didNotTransitionPromise;
+                }
+
+                me.transitioning = true;
+                me.notifyAll(StateRouter.STATE_CHANGE_TRANSITIONING, transitionEvent);
+            } else {
+                me.transitioning = true;
             }
 
-            me.transitioning = true;
-            me.notifyAll(StateRouter.STATE_CHANGE_TRANSITIONING, transitionEvent);
-        } else {
-            me.transitioning = true;
-        }
+            // For new states, create (in the case of ViewController) or obtain an instance of the controller
+            // and install it in the path.
+            me.updateControllersForPath(me.keep);
 
-        // For new states, create (in the case of ViewController) or obtain an instance of the controller
-        // and install it in the path.
-        this.updateControllersForPath(this.keep);
+            lastNodeForwarding = me.isLastNodeForwarding();
 
-        lastNodeForwarding = me.isLastNodeForwarding();
-
-        // If we're not forwarding to a child, update the address bar at this point.
-        // Updating the address bar is not synchronous, so we maintain a history change 'promise'
-        // which must complete before the transition completes.
-        if (!lastNodeForwarding && !keepUrl) {
-            historyPromise = me.updateAddressBar();
-        }
-
-        // We're starting the transition
-
-        // 1. Transition away view (animation such as fading out)
-        // 1a. In parallel, stop the discarded states
-        // 1b. Once discarded states stopped, then start loading resolvables
-
-        // 2. Once transition animation and resolvables complete, then start new states
-
-
-        // Resolve all resolvable items in all controllers before entering new state
-        combinedControllersPromise = me.createStopAndResolvePromise();
-        resolveBeforeTransition.push(combinedControllersPromise);
-
-        // If we have an old state and the new state has a view, we may need to
-        // transition away from the old view unless we're keeping everything.
-        // For instance, going directly into a child view.
-        if (me.currentPath !== null &&
-            me.toPath.lastNode().state.getView() &&
-            me.keep < me.currentPath.nodes.length) {
-
-            // The "old" view in this case is the first view discarded.
-            viewTransitionPromise = me.transition.transitionFrom(
-                me.currentPath.nodes[me.keep].view,
-                combinedControllersPromise
-            );
-
-            if (viewTransitionPromise) {
-                resolveBeforeTransition.push(viewTransitionPromise);
-            }
-        }
-
-        return RSVP.all(resolveBeforeTransition).then(function () {
-
-            // The last node was forwarded, update the address bar now
-            if (lastNodeForwarding) {
+            // If we're not forwarding to a child, update the address bar at this point.
+            // Updating the address bar is not synchronous, so we maintain a history change 'promise'
+            // which must complete before the transition completes.
+            if (!lastNodeForwarding && !keepUrl) {
                 historyPromise = me.updateAddressBar();
             }
 
-            // Because the last node may forward to a child and we do not know what the forwarded
-            // state is until the the resolvables are resolved, we only know the final
-            // state at this point (when forwardToChild)
-            transitionEvent.toState = me.toPath.lastNode().state.getName();
+            // We're starting the transition
 
-            // Enter the new controllers
-            var startPromise = me.startNewControllers();
+            // 1. Transition away view (animation such as fading out)
+            // 1a. In parallel, stop the discarded states
+            // 1b. Once discarded states stopped, then start loading resolvables
 
-            return RSVP.all([historyPromise, startPromise]);
-        }).then(function() {
-            me.currentPath = me.toPath;
+            // 2. Once transition animation and resolvables complete, then start new states
 
-            me.transitioning = false;
 
-            // It's possible the controllers notified below or any code using the wrapped promise
-            // may throw an exception. In that case, the error handler below still execute even though
-            // the transition was actually successful.
+            // Resolve all resolvable items in all controllers before entering new state
+            combinedControllersPromise = me.createStopAndResolvePromise();
+            resolveBeforeTransition.push(combinedControllersPromise);
 
-            // If we've kept everything, then it means we navigated to some parent state
-            // we must notify the last node so it knows to update its UI
-            if (me.keep === me.currentPath.nodes.length) {
-                me.notifyAll(StateRouter.STATE_CHANGED, transitionEvent);
-            } else {
-                // We notify all except the last node
-                me.notifyAncestors(StateRouter.STATE_CHANGED, transitionEvent);
+            // If we have an old state and the new state has a view, we may need to
+            // transition away from the old view unless we're keeping everything.
+            // For instance, going directly into a child view.
+            if (me.currentPath !== null &&
+                me.toPath.lastNode().state.getView() &&
+                me.keep < me.currentPath.nodes.length) {
+
+                // The "old" view in this case is the first view discarded.
+                viewTransitionPromise = me.transition.transitionFrom(
+                    me.currentPath.nodes[me.keep].view,
+                    combinedControllersPromise
+                );
+
+                if (viewTransitionPromise) {
+                    resolveBeforeTransition.push(viewTransitionPromise);
+                }
             }
 
-            return true;
-        }).then(undefined, function (error) { // same as "catch", but safer since catch is reserved word
-            // TODO: On failure destroy view controllers from keep to end
-            var errorEvent = Ext.apply({ error: error}, transitionEvent);
+            return RSVP.all(resolveBeforeTransition).then(function () {
 
-            me.transitioning = false;
-            me.notifyAll(StateRouter.STATE_CHANGE_FAILED, errorEvent);
-            me.currentPath = null;
-            Ext.callback(me.errorHandler, me, [errorEvent]);
+                // The last node was forwarded, update the address bar now
+                if (lastNodeForwarding) {
+                    historyPromise = me.updateAddressBar();
+                }
 
-            throw error;
+                // Because the last node may forward to a child and we do not know what the forwarded
+                // state is until the the resolvables are resolved, we only know the final
+                // state at this point (when forwardToChild)
+                transitionEvent.toState = me.toPath.lastNode().state.getName();
+
+                // Enter the new controllers
+                var startPromise = me.startNewControllers();
+
+                return RSVP.all([historyPromise, startPromise]);
+            }).then(function() {
+                me.currentPath = me.toPath;
+
+                me.transitioning = false;
+
+                // It's possible the controllers notified below or any code using the wrapped promise
+                // may throw an exception. In that case, the error handler below still execute even though
+                // the transition was actually successful.
+
+                // If we've kept everything, then it means we navigated to some parent state
+                // we must notify the last node so it knows to update its UI
+                if (me.keep === me.currentPath.nodes.length) {
+                    me.notifyAll(StateRouter.STATE_CHANGED, transitionEvent);
+                } else {
+                    // We notify all except the last node
+                    me.notifyAncestors(StateRouter.STATE_CHANGED, transitionEvent);
+                }
+
+                return true;
+            }).then(undefined, function (error) { // same as "catch", but safer since catch is reserved word
+                // TODO: On failure destroy view controllers from keep to end
+                var errorEvent = Ext.apply({ error: error}, transitionEvent);
+
+                me.transitioning = false;
+                me.notifyAll(StateRouter.STATE_CHANGE_FAILED, errorEvent);
+                me.currentPath = null;
+                Ext.callback(me.errorHandler, me, [errorEvent]);
+
+                throw error;
+            });
         });
     },
 
