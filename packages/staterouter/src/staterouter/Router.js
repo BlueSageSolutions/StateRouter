@@ -213,7 +213,7 @@ Ext.define('StateRouter.staterouter.Router', {
             opts = options || {};
 
         Ext.apply(opts, {inherit: true});
-        this.transitionTo(newStateName, stateParameters, opts);
+        return this.transitionTo(newStateName, stateParameters, opts);
     },
 
     /**
@@ -264,12 +264,17 @@ Ext.define('StateRouter.staterouter.Router', {
             force = Ext.isObject(options) && options.force === true,
             keepUrl = Ext.isObject(options) && options.keepUrl === true;
 
-        if (options) {
-            reload = options.reload;
+        var didNotTransitionPromise = new RSVP.Promise(function (resolve) { resolve(false); });
 
-            if (Ext.isString(reload)) {
-                if (!this.stateManager.hasStateDefinition(reload)) {
-                    throw 'Unknown reload state: ' + reload;
+        if (options) {
+
+            if (options.reload !== undefined) {
+                reload = options.reload;
+
+                if (Ext.isString(reload)) {
+                    if (!this.stateManager.hasStateDefinition(reload)) {
+                        throw 'Unknown reload state: ' + reload;
+                    }
                 }
             }
         }
@@ -284,11 +289,11 @@ Ext.define('StateRouter.staterouter.Router', {
                 // returning early here (we're not returning the promise).
                 me.transitionTo(newStateName, stateParams, options);
             }, me, { single: true });
-            return;
+            return didNotTransitionPromise;
         }
 
         if (me.transitioning) {
-            return;
+            return didNotTransitionPromise;
         }
 
         stateParams = stateParams || {};
@@ -317,7 +322,7 @@ Ext.define('StateRouter.staterouter.Router', {
         if (me.currentPath !== null) {
             if (reload === false && me.toPath.isEqual(me.currentPath)) {
                 Ext.log('Asked to go to the same place');
-                return false;
+                return didNotTransitionPromise;
             }
 
             this.calculateKeepPoint(reload);
@@ -330,7 +335,7 @@ Ext.define('StateRouter.staterouter.Router', {
 
                 // Let running controllers know it was canceled
                 me.notifyAll(StateRouter.STATE_CHANGE_CANCELED, transitionEvent);
-                return false;
+                return didNotTransitionPromise;
             }
 
             me.transitioning = true;
@@ -383,53 +388,51 @@ Ext.define('StateRouter.staterouter.Router', {
             }
         }
 
-        RSVP.all(resolveBeforeTransition).then(function () {
+        return RSVP.all(resolveBeforeTransition).then(function () {
 
-            // This has to be wrapped in a promise, otherwise
-            // exceptions are being eaten by RSVP
-            return new RSVP.Promise(function (resolve) {
+            // The last node was forwarded, update the address bar now
+            if (lastNodeForwarding) {
+                historyPromise = me.updateAddressBar();
+            }
 
-                // The last node was forwarded, update the address bar now
-                if (lastNodeForwarding) {
-                    historyPromise = me.updateAddressBar();
-                }
+            // Because the last node may forward to a child and we do not know what the forwarded
+            // state is until the the resolvables are resolved, we only know the final
+            // state at this point (when forwardToChild)
+            transitionEvent.toState = me.toPath.lastNode().state.getName();
 
-                // Because the last node may forward to a child and we do not know what the forwarded
-                // state is until the the resolvables are resolved, we only know the final
-                // state at this point (when forwardToChild)
-                transitionEvent.toState = me.toPath.lastNode().state.getName();
+            // Enter the new controllers
+            var startPromise = me.startNewControllers();
 
-                // Enter the new controllers
-                me.startNewControllers();
-
-                resolve();
-            });
+            return RSVP.all([historyPromise, startPromise]);
         }).then(function() {
-            historyPromise.then(function () {
-                me.currentPath = me.toPath;
+            me.currentPath = me.toPath;
 
-                me.transitioning = false;
+            me.transitioning = false;
 
-                // If we've kept everything, then it means we navigated to some parent state
-                // we must notify the last node so it knows to update its UI
-                if (me.keep === me.currentPath.nodes.length) {
-                    me.notifyAll(StateRouter.STATE_CHANGED, transitionEvent);
-                } else {
-                    // We notify all except the last node
-                    me.notifyAncestors(StateRouter.STATE_CHANGED, transitionEvent);
-                }
-            });
+            // It's possible the controllers notified below or any code using the wrapped promise
+            // may throw an exception. In that case, the error handler below still execute even though
+            // the transition was actually successful.
 
-        }, function (error) {
+            // If we've kept everything, then it means we navigated to some parent state
+            // we must notify the last node so it knows to update its UI
+            if (me.keep === me.currentPath.nodes.length) {
+                me.notifyAll(StateRouter.STATE_CHANGED, transitionEvent);
+            } else {
+                // We notify all except the last node
+                me.notifyAncestors(StateRouter.STATE_CHANGED, transitionEvent);
+            }
+
+            return true;
+        }).then(undefined, function (error) { // same as "catch", but safer since catch is reserved word
             // TODO: On failure destroy view controllers from keep to end
             var errorEvent = Ext.apply({ error: error}, transitionEvent);
 
-            historyPromise.then(function () {
-                me.transitioning = false;
-                me.notifyAll(StateRouter.STATE_CHANGE_FAILED, errorEvent);
-                me.currentPath = null;
-                Ext.callback(me.errorHandler, me, [errorEvent]);
-            });
+            me.transitioning = false;
+            me.notifyAll(StateRouter.STATE_CHANGE_FAILED, errorEvent);
+            me.currentPath = null;
+            Ext.callback(me.errorHandler, me, [errorEvent]);
+
+            throw error;
         });
     },
 
@@ -863,6 +866,9 @@ Ext.define('StateRouter.staterouter.Router', {
                 Ext.callback(controller[me.startFnName], controller, [pathNode.allParams, stateDefinition.getName()]);
             }
         }
+
+        // In the future, controller start methods may use promises
+        return new RSVP.Promise(function (resolve) { resolve(); });
     },
 
 

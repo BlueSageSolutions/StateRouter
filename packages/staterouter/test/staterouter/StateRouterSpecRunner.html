@@ -16,7 +16,9 @@
         RSVP.on('error', function(reason) {
             console.log('----------- AN ERROR OCCURRED -------------');
             console.assert(false, reason);
-            console.assert(false, reason.stack);
+            if (reason) {
+                console.assert(false, reason.stack);
+            }
         });
     </script>
     <!-- include source files here... -->
