@@ -421,6 +421,7 @@ Ext.define('StateRouter.staterouter.Router', {
             });
 
         }, function (error) {
+            // TODO: On failure destroy view controllers from keep to end
             var errorEvent = Ext.apply({ error: error}, transitionEvent);
 
             historyPromise.then(function () {
@@ -904,6 +905,12 @@ Ext.define('StateRouter.staterouter.Router', {
                 allResolved: previouslyResolved,
                 stateName: stateDefinition.getName()
             });
+
+            if (stateDefinition.getViewController()) {
+                Ext.apply(viewConfig, {
+                    controller: pathNode.controller
+                });
+            }
 
             Ext.apply(viewConfig, me.transition.getAdditionalViewConfigOptions(pathNode, nodeIndex, this.keep, path));
             // Create the child and insert it into the parent

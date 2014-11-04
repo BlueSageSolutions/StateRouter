@@ -1304,6 +1304,104 @@ describe("Router", function() {
         });
     });
 
+    describe("View Controllers", function () {
+        var vp;
+        var router;
+
+        beforeEach(function () {
+            vp = Ext.create('Ext.container.Container', {
+                id: 'vp',
+                renderTo: Ext.getBody()
+            });
+            router = Ext.create('StateRouter.staterouter.Router');
+            router.configure({
+                root: 'vp'
+            });
+        });
+
+        afterEach(function () {
+            vp.destroy();
+        });
+
+        it("should start a view controller when entering a state", function (done) {
+            var value;
+
+            Ext.define('MyApp.UserController1', {
+                extend : 'Ext.app.ViewController',
+
+                start: function () {
+                    value = 'Hello'
+                }
+            });
+
+            Ext.define('UserContainer1', {
+                extend: 'Ext.container.Container'
+            });
+
+            router.state('state1', {
+                viewController: 'MyApp.UserController1',
+                view: 'UserContainer1'
+            });
+            router.go('state1');
+
+            setTimeout(function () {
+                expect(value).toBe('Hello');
+                done();
+            }, 1);
+        });
+
+        it("should destroy controller when view is destroyed", function (done) {
+            var c;
+            var c2;
+
+            Ext.define('MyApp.UserController11', {
+                extend : 'Ext.app.ViewController',
+
+                blah: 'narf',
+
+                start: function () {
+                    c = this;
+                }
+            });
+
+            Ext.define('MyApp.UserController22', {
+                extend : 'Ext.app.ViewController',
+
+                start: function () {
+                    c2 = 'Hello'
+                }
+            });
+
+            Ext.define('UserContainer11', {
+                extend: 'Ext.container.Container'
+            });
+            Ext.define('UserContainer22', {
+                extend: 'Ext.container.Container'
+            });
+
+            router.state('state1', {
+                viewController: 'MyApp.UserController11',
+                view: 'UserContainer11'
+            });
+            router.state('state2', {
+                viewController: 'MyApp.UserController22',
+                view: 'UserContainer22'
+            });
+            router.go('state1');
+
+            setTimeout(function () {
+                expect(c.blah).toBe(vp.down('container').getController().blah);
+//
+                router.go('state2');
+                setTimeout(function () {
+                    expect(c.blah).toBe('narf');
+                    expect(c.isDestroyed).toBe(true);
+                    done();
+                }, 600); // TODO: the reason this is 600 is because of fade transition... need transitionTo to return a promise
+            }, 1);
+        });
+    });
+
     describe("Resolve", function() {
         var router;
 
@@ -1507,7 +1605,6 @@ describe("Router", function() {
 
                 router.configure({
                     controllerProvider: function (name) {
-                        console.log('CONTROLLER PROVIDER: ' + name);
                         if (name === 'controller1') {
                             return controller1;
                         }
@@ -1527,43 +1624,39 @@ describe("Router", function() {
                     view: 'ChildView'
                 });
 
-                console.log('GOING TO CHILD 1');
                 router.go('state1.child1');
 
                 setTimeout(function () {
-                    console.log('here');
-                    expect(router.getCurrentState()).toBe('state1.child1');
+                    expect(vp.down('mainview').getResolved()).not.toBeUndefined();
+                    expect(vp.down('mainview').getResolved()).not.toBeNull();
+                    expect(vp.down('mainview').getResolved().a).toBe('Hello');
+                    expect(vp.down('mainview').getResolved().b).toBe('World');
+                    expect(vp.down('mainview').getAllResolved()).not.toBeUndefined();
+                    expect(vp.down('mainview').getAllResolved()).not.toBeNull();
+                    expect(vp.down('mainview').getAllResolved().state1.a).toBe('Hello');
+                    expect(vp.down('mainview').getAllResolved().state1.b).toBe('World');
+                    expect(vp.down('mainview').getStateName()).toBe('state1');
+
+                    expect(vp.down('childview').myResolved).not.toBeUndefined();
+                    expect(vp.down('childview').myResolved).not.toBeNull();
+                    expect(vp.down('childview').myResolved.a).toBe('Child');
+                    expect(vp.down('childview').myAllResolved).not.toBeUndefined();
+                    expect(vp.down('childview').myAllResolved).not.toBeNull();
+                    expect(vp.down('childview').myAllResolved.state1.a).toBe('Hello');
+                    expect(vp.down('childview').myAllResolved.state1.b).toBe('World');
+                    expect(vp.down('childview').myAllResolved['state1.child1'].a).toBe('Child');
+                    expect(vp.down('childview').myStateName).toBe('state1.child1');
+
+                    expect(vp.down('childview').resolved).not.toBeUndefined();
+                    expect(vp.down('childview').resolved).not.toBeNull();
+                    expect(vp.down('childview').resolved.a).toBe('Child');
+                    expect(vp.down('childview').allResolved).not.toBeUndefined();
+                    expect(vp.down('childview').allResolved).not.toBeNull();
+                    expect(vp.down('childview').allResolved.state1.a).toBe('Hello');
+                    expect(vp.down('childview').allResolved.state1.b).toBe('World');
+                    expect(vp.down('childview').allResolved['state1.child1'].a).toBe('Child');
+                    expect(vp.down('childview').stateName).toBe('state1.child1');
                     done();
-//                    expect(vp.down('mainview').getResolved()).not.toBeUndefined();
-//                    expect(vp.down('mainview').getResolved()).not.toBeNull();
-//                    expect(vp.down('mainview').getResolved().a).toBe('Hello');
-//                    expect(vp.down('mainview').getResolved().b).toBe('World');
-//                    expect(vp.down('mainview').getAllResolved()).not.toBeUndefined();
-//                    expect(vp.down('mainview').getAllResolved()).not.toBeNull();
-//                    expect(vp.down('mainview').getAllResolved().state1.a).toBe('Hello');
-//                    expect(vp.down('mainview').getAllResolved().state1.b).toBe('World');
-//                    expect(vp.down('mainview').getStateName()).toBe('state1');
-//
-//                    expect(vp.down('childview').myResolved).not.toBeUndefined();
-//                    expect(vp.down('childview').myResolved).not.toBeNull();
-//                    expect(vp.down('childview').myResolved.a).toBe('Child');
-//                    expect(vp.down('childview').myAllResolved).not.toBeUndefined();
-//                    expect(vp.down('childview').myAllResolved).not.toBeNull();
-//                    expect(vp.down('childview').myAllResolved.state1.a).toBe('Hello');
-//                    expect(vp.down('childview').myAllResolved.state1.b).toBe('World');
-//                    expect(vp.down('childview').myAllResolved['state1.child1'].a).toBe('Child');
-//                    expect(vp.down('childview').myStateName).toBe('state1.child1');
-//
-//                    expect(vp.down('childview').resolved).not.toBeUndefined();
-//                    expect(vp.down('childview').resolved).not.toBeNull();
-//                    expect(vp.down('childview').resolved.a).toBe('Child');
-//                    expect(vp.down('childview').allResolved).not.toBeUndefined();
-//                    expect(vp.down('childview').allResolved).not.toBeNull();
-//                    expect(vp.down('childview').allResolved.state1.a).toBe('Hello');
-//                    expect(vp.down('childview').allResolved.state1.b).toBe('World');
-//                    expect(vp.down('childview').allResolved['state1.child1'].a).toBe('Child');
-//                    expect(vp.down('childview').stateName).toBe('state1.child1');
-//                    done();
                 }, 1);
             });
         });
