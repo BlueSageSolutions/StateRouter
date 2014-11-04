@@ -16,14 +16,14 @@
         RSVP.on('error', function(reason) {
             console.log('----------- AN ERROR OCCURRED -------------');
             console.assert(false, reason);
+            console.assert(false, reason.stack);
         });
     </script>
     <!-- include source files here... -->
     <script type="text/javascript" src="../../src/staterouter/StateDefinition.js"></script>
     <script type="text/javascript" src="../../src/staterouter/PathNode.js"></script>
-    <script type="text/javascript" src="../../src/staterouter/State.js"></script>
+    <script type="text/javascript" src="../../src/staterouter/Path.js"></script>
     <script type="text/javascript" src="../../src/staterouter/UrlParser.js"></script>
-    <script type="text/javascript" src="../../src/staterouter/StateViewManager.js"></script>
     <script type="text/javascript" src="../../src/staterouter/PathPromiseResolver.js"></script>
     <script type="text/javascript" src="../../src/staterouter/StateManager.js"></script>
     <script type="text/javascript" src="../../src/staterouter/transitions/BaseViewTransition.js"></script>
@@ -33,7 +33,7 @@
     <!-- include spec files here... -->
     <script type="text/javascript" src="PathNodeSpec.js"></script>
     <script type="text/javascript" src="PathPromiseResolverSpec.js"></script>
-    <script type="text/javascript" src="StateSpec.js"></script>
+    <script type="text/javascript" src="PathSpec.js"></script>
     <script type="text/javascript" src="StateManagerSpec.js"></script>
     <script type="text/javascript" src="UrlParserSpec.js"></script>
     <script type="text/javascript" src="RouterSpec.js"></script>

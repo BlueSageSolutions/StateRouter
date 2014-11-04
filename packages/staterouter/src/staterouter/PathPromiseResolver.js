@@ -1,13 +1,10 @@
 Ext.define('StateRouter.staterouter.PathPromiseResolver', {
 
-    stateManager: null,
-
     chainPromise: function (previousPathNode, pathNode, existingPromise) {
-        var me = this;
         return existingPromise.then(function () {
             var promises = [];
-            var stateName = pathNode.getDefinition().getName();
-            var controller = me.stateManager.getControllerForPathNode(pathNode);
+            var stateName = pathNode.state.getName();
+            var controller = pathNode.controller;
             var resolved = {};
             var previouslyResolved = {};
 
@@ -38,7 +35,7 @@ Ext.define('StateRouter.staterouter.PathPromiseResolver', {
                                 resolve(results);
                             };
 
-                            Ext.callback(resolveFn, controller, [successCallback, reject, pathNode.getAllParams(), previouslyResolved]);
+                            Ext.callback(resolveFn, controller, [successCallback, reject, pathNode.allParams, previouslyResolved]);
                         });
                         promises.push(promise);
                     }

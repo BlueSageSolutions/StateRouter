@@ -1,13 +1,10 @@
 describe("PathPromiseResolver", function() {
 
     var resolver,
-        stateManager,
-        stateViewManager;
+        stateManager;
 
     beforeEach(function() {
         stateManager = Ext.create('StateRouter.staterouter.StateManager');
-        stateViewManager = Ext.create('StateRouter.staterouter.StateViewManager');
-        stateManager.stateViewManager = stateViewManager;
         resolver = Ext.create('StateRouter.staterouter.PathPromiseResolver');
         resolver.stateManager = stateManager;
     });
@@ -23,19 +20,13 @@ describe("PathPromiseResolver", function() {
     });
 
     it("should resolve a single path with no resolvables", function(done) {
-        var path = [],
-            controller = {};
+        var path = [];
 
-        stateManager.controllerProvider = function () {
-            return controller;
-        };
-
-        stateManager.register('main', {
-            controller: 'main'
-        });
+        stateManager.register('main');
 
         path.push(Ext.create('StateRouter.staterouter.PathNode', {
-            definition: stateManager.getStateDefinition('main')
+            state: stateManager.getStateDefinition('main'),
+            controller: {}
         }));
 
         var p = resolver.createResolvePromise(path, 0);
@@ -58,15 +49,11 @@ describe("PathPromiseResolver", function() {
                 }
             };
 
-        stateManager.controllerProvider = function () {
-            return controller;
-        };
-        stateManager.register('main', {
-            controller: 'main'
-        });
+        stateManager.register('main');
 
         path.push(Ext.create('StateRouter.staterouter.PathNode', {
-            definition: stateManager.getStateDefinition('main')
+            state: stateManager.getStateDefinition('main'),
+            controller: controller
         }));
 
         var p = resolver.createResolvePromise(path, 0);
@@ -114,26 +101,17 @@ describe("PathPromiseResolver", function() {
                 }
             };
 
-        stateManager.controllerProvider = function (name) {
-            if (name === 'main') {
-                return keptController;
-            } else if (name === 'main.home') {
-                return newController;
-            }
-            return null;
-        };
-        stateManager.register('main', {
-            controller: 'main'
-        });
-        stateManager.register('main.home', {
-            controller: 'main.home'
-        });
+
+        stateManager.register('main');
+        stateManager.register('main.home');
 
         path.push(Ext.create('StateRouter.staterouter.PathNode', {
-            definition: stateManager.getStateDefinition('main')
+            state: stateManager.getStateDefinition('main'),
+            controller: keptController
         }));
         path.push(Ext.create('StateRouter.staterouter.PathNode', {
-            definition: stateManager.getStateDefinition('main.home')
+            state: stateManager.getStateDefinition('main.home'),
+            controller: newController
         }));
 
         var p = resolver.createResolvePromise(path, 1);
@@ -164,27 +142,21 @@ describe("PathPromiseResolver", function() {
                 }
             };
 
-        stateManager.controllerProvider = function (name) {
-            if (name === 'a') {
-                return a;
-            } else if (name === 'a.b.c') {
-                return c;
-            }
-            return null;
-        };
         stateManager.register('a', { controller: 'a' });
         stateManager.register('a.b');
         stateManager.register('a.b.c', { controller: 'a.b.c' });
 
         path = [
             Ext.create('StateRouter.staterouter.PathNode', {
-                definition: stateManager.getStateDefinition('a')
+                state: stateManager.getStateDefinition('a'),
+                controller: a
             }),
             Ext.create('StateRouter.staterouter.PathNode', {
-                definition: stateManager.getStateDefinition('a.b')
+                state: stateManager.getStateDefinition('a.b')
             }),
             Ext.create('StateRouter.staterouter.PathNode', {
-                definition: stateManager.getStateDefinition('a.b.c')
+                state: stateManager.getStateDefinition('a.b.c'),
+                controller: c
             })
         ];
 
@@ -285,23 +257,14 @@ describe("PathPromiseResolver", function() {
                 }
             };
 
-        stateManager.controllerProvider = function (name) {
-            if (name === 'a') {
-                return controllerA;
-            } else if (name === 'a.b') {
-                return controllerB;
-            } else if (name === 'a.b.c') {
-                return controllerC;
-            }
-            return null;
-        };
         stateManager.register('a', { controller: 'a' });
         stateManager.register('a.b', { controller: 'a.b' });
         stateManager.register('a.b.c', { controller: 'a.b.c' });
 
         oldPath = [
             Ext.create('StateRouter.staterouter.PathNode', {
-                definition: stateManager.getStateDefinition('a')
+                state: stateManager.getStateDefinition('a'),
+                controller: controllerA
             })
         ];
 
@@ -317,13 +280,16 @@ describe("PathPromiseResolver", function() {
 
             newPath = [
                 Ext.create('StateRouter.staterouter.PathNode', {
-                    definition: stateManager.getStateDefinition('a')
+                    state: stateManager.getStateDefinition('a'),
+                    controller: controllerA
                 }),
                 Ext.create('StateRouter.staterouter.PathNode', {
-                    definition: stateManager.getStateDefinition('a.b')
+                    state: stateManager.getStateDefinition('a.b'),
+                    controller: controllerB
                 }),
                 Ext.create('StateRouter.staterouter.PathNode', {
-                    definition: stateManager.getStateDefinition('a.b.c')
+                    state: stateManager.getStateDefinition('a.b.c'),
+                    controller: controllerC
                 })
             ];
             newPath[0].resolved = controllerA.resolved;
@@ -379,14 +345,6 @@ describe("PathPromiseResolver", function() {
         };
         var path;
 
-        stateManager.controllerProvider = function (name) {
-            if (name === 'a') {
-                return a;
-            } else if (name === 'b') {
-                return b;
-            }
-            return null;
-        };
         stateManager.register('a', {
             controller: 'a',
             params: ['user']
@@ -398,7 +356,8 @@ describe("PathPromiseResolver", function() {
 
         path = [
             Ext.create('StateRouter.staterouter.PathNode', {
-                definition: stateManager.getStateDefinition('a'),
+                state: stateManager.getStateDefinition('a'),
+                controller: a,
                 ownParams: {
                     user: 'bob'
                 },
@@ -407,7 +366,8 @@ describe("PathPromiseResolver", function() {
                 }
             }),
             Ext.create('StateRouter.staterouter.PathNode', {
-                definition: stateManager.getStateDefinition('a.b'),
+                state: stateManager.getStateDefinition('a.b'),
+                controller: b,
                 ownParams: {
                     id: '1',
                     contactId: '2'
