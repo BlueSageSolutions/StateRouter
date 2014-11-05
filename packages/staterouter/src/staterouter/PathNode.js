@@ -1,17 +1,22 @@
 Ext.define('StateRouter.staterouter.PathNode', {
 
     requires: [
-        'StateRouter.staterouter.StateDefinition'
+        'StateRouter.staterouter.State'
     ],
 
-    config: {
-        definition: null,
-        ownParams: {},
-        allParams: {}
-    },
+    state: null,
+    ownParams: {},
+    allParams: {},
+    containerForChildren: null,
+    view: null,
+    controller: null,
 
-    constructor: function(config) {
-        this.initConfig(config);
+    // PathPromiseResolver sets these
+    resolved: null,
+    allResolved: null,
+
+    constructor: function (config) {
+        Ext.apply(this, config);
     },
 
     /**
@@ -21,38 +26,43 @@ Ext.define('StateRouter.staterouter.PathNode', {
      * @returns {boolean}
      */
     isEqual: function (other) {
-        var key,
-            otherParams;
-
         if (!other) {
             throw "Other state undefined";
         }
 
-        if (this.definition.getName() !== other.definition.getName()) {
+        if (this.state.name !== other.state.name) {
             return false;
         }
 
-        otherParams = other.ownParams;
+        return Ext.Object.equals(this.ownParams, other.ownParams);
+    },
 
-        for (key in this.ownParams) {
-            if (this.ownParams.hasOwnProperty(key)) {
+    /**
+     * First, we save this view.
+     *
+     * Most importantly, if this state has any child states defined,
+     * we also save the view Container where the children will be inserted.
+     *
+     * @param viewComponent
+     */
+    registerView: function (viewComponent) {
+        if (viewComponent) {
 
-                if (!otherParams.hasOwnProperty(key) || this.ownParams[key] !== otherParams[key]) {
-                    return false;
-                }
+            this.view = viewComponent;
+
+            // This view may be an ancestor of other views.  Either the entire
+            // view will be swapped out or it will have a child which will act
+            // as the container for nested children.
+
+            if (viewComponent.routerView) {
+                this.containerForChildren = viewComponent;
+            } else {
+                this.containerForChildren = viewComponent.down('container[routerView]');
+
+                // TODO: The following comment doesn't really make sense. How can a child state use a parent view?
+                // If this state is not a leaf and it does not define a routerView,
+                // then some parent will be the child view insertion point
             }
         }
-
-        for (key in otherParams) {
-            if (otherParams.hasOwnProperty(key)) {
-
-                if (!this.ownParams.hasOwnProperty(key) || this.ownParams[key] !== otherParams[key]) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
     }
-
 });

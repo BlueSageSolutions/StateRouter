@@ -1,0 +1,46 @@
+<html>
+
+<head>
+    <link rel="shortcut icon" type="image/png" href="jasmine/lib/jasmine-2.0.3/jasmine_favicon.png">
+    <link rel="stylesheet" type="text/css" href="jasmine/lib/jasmine-2.0.3/jasmine.css">
+
+    <script type="text/javascript" src="jasmine/lib/jasmine-2.0.3/jasmine.js"></script>
+    <script type="text/javascript" src="jasmine/lib/jasmine-2.0.3/jasmine-html.js"></script>
+    <script type="text/javascript" src="jasmine/lib/jasmine-2.0.3/boot.js"></script>
+
+    <!-- include lib files here... -->
+    <script type="text/javascript" src="../../../../ext/build/ext-all-debug.js"></script>
+    <script type="text/javascript" src="../../lib/rsvp-latest.js"></script>
+
+    <script type="text/javascript">
+        RSVP.on('error', function(reason) {
+            console.log('----------- AN ERROR OCCURRED -------------');
+            console.assert(false, reason);
+            if (reason) {
+                console.assert(false, reason.stack);
+            }
+        });
+    </script>
+    <!-- include source files here... -->
+    <script type="text/javascript" src="../../src/staterouter/State.js"></script>
+    <script type="text/javascript" src="../../src/staterouter/PathNode.js"></script>
+    <script type="text/javascript" src="../../src/staterouter/Path.js"></script>
+    <script type="text/javascript" src="../../src/staterouter/UrlParser.js"></script>
+    <script type="text/javascript" src="../../src/staterouter/PathPromiseResolver.js"></script>
+    <script type="text/javascript" src="../../src/staterouter/StateManager.js"></script>
+    <script type="text/javascript" src="../../src/staterouter/transitions/BaseViewTransition.js"></script>
+    <script type="text/javascript" src="../../src/staterouter/transitions/FadeTransition.js"></script>
+    <script type="text/javascript" src="../../src/staterouter/Router.js"></script>
+
+    <!-- include spec files here... -->
+    <script type="text/javascript" src="PathNodeSpec.js"></script>
+    <script type="text/javascript" src="PathPromiseResolverSpec.js"></script>
+    <script type="text/javascript" src="PathSpec.js"></script>
+    <script type="text/javascript" src="StateManagerSpec.js"></script>
+    <script type="text/javascript" src="UrlParserSpec.js"></script>
+    <script type="text/javascript" src="RouterSpec.js"></script>
+</head>
+
+<body>
+</body>
+</html>
