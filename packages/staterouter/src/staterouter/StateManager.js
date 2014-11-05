@@ -65,7 +65,7 @@ Ext.define('StateRouter.staterouter.StateManager', {
             }
 
             newState.parent = me.states[parentStateName];
-            newState.depth = me.states[parentStateName].depth;
+            newState.depth = newState.parent.depth + 1;
         }
 
         // If URL is specified, the URL parameters will override the 'params' property
