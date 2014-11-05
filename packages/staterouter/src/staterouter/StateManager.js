@@ -46,30 +46,30 @@ Ext.define('StateRouter.staterouter.StateManager', {
         // Now build the state
         newState = Ext.create('StateRouter.staterouter.State', newStateConfig);
 
-        if (!newState.getName()) {
+        if (!newState.name) {
             throw "State requires 'name'";
         }
 
         // Determine if this is a child state and if so verify and set the parent
-        lastPeriodIndex = newState.getName().lastIndexOf('.');
+        lastPeriodIndex = newState.name.lastIndexOf('.');
 
         // Extract the parent from the name
         if (lastPeriodIndex === -1) {
-            newState.setParent(null);
-            newState.setDepth(0);
+            newState.parent = null;
+            newState.depth = 0;
         } else {
-            parentStateName = newState.getName().slice(0, lastPeriodIndex);
+            parentStateName = newState.name.slice(0, lastPeriodIndex);
 
             if (!me.states.hasOwnProperty(parentStateName)) {
                 throw "Parent '" + parentStateName + "' not found";
             }
 
-            newState.setParent(me.states[parentStateName]);
-            newState.setDepth(me.states[parentStateName].getDepth());
+            newState.parent = me.states[parentStateName];
+            newState.depth = me.states[parentStateName].depth;
         }
 
         // If URL is specified, the URL parameters will override the 'params' property
-        if (newState.getUrl()) {
+        if (newState.url) {
 
             // Since this state can be navigated to via a URL,
             // all parents which have params must provide URLs
@@ -83,43 +83,43 @@ Ext.define('StateRouter.staterouter.StateManager', {
             //    baseUrl: /abc/:param
             //    queryParams: ['a', 'b']
             // }
-            splitUrlResult = this.urlParser.splitUrl(newState.getUrl());
+            splitUrlResult = this.urlParser.splitUrl(newState.url);
 
-            newState.setQueryParams(splitUrlResult.queryParams);
+            newState.queryParams = splitUrlResult.queryParams;
 
             // Build the full baseUrl path from the root state (not including query params)
-            newState.setAbsoluteUrl(splitUrlResult.baseUrl);
-            if (newState.getParent() && newState.getParent().getUrl()) {
-                newState.setAbsoluteUrl(newState.getParent().getAbsoluteUrl() + newState.getAbsoluteUrl());
+            newState.absoluteUrl = splitUrlResult.baseUrl;
+            if (newState.parent && newState.parent.url) {
+                newState.absoluteUrl = newState.parent.absoluteUrl + newState.absoluteUrl;
             }
 
             // We call the parser twice, once with the full path to this state, including all parents baseUrls
             // This gives us our regex so we can test if a user entered full URL matches this state
-            urlParserResult = this.urlParser.parse(newState.getAbsoluteUrl(), me.getAllUrlParamConditions(newState));
-            newState.setAbsoluteUrlRegex(urlParserResult.regex);
+            urlParserResult = this.urlParser.parse(newState.absoluteUrl, me.getAllUrlParamConditions(newState));
+            newState.absoluteUrlRegex = urlParserResult.regex;
 
             // Next, we pass just the partial URL for this specific state to the urlParser, this is just a simple
             // way to extract the URL position based parameters solely for this state
             urlParserResult = this.urlParser.parse(splitUrlResult.baseUrl);
-            newState.setUrlParams(urlParserResult.params);
+            newState.urlParams = urlParserResult.params;
 
-            newState.setParams(newState.getUrlParams().concat(newState.getQueryParams()));
+            newState.params = newState.urlParams.concat(newState.queryParams);
         }
 
-        me.states[newState.getName()] = newState;
+        me.states[newState.name] = newState;
 
         me.fireEvent('stateregistered', newState);
         return me;
     },
 
     verifyAllParentsNavigable: function (state) {
-        var parent = state;
+        var parentState = state;
 
         // Ensure all parent nodes that have at least one parameter specify a URL
-        while ((parent = parent.getParent()) !== null) {
+        while ((parentState = parentState.parent) !== null) {
 
-            if (!parent.getUrl() && parent.getParams().length > 0) {
-                throw "All parents of state '" + state.getName() +
+            if (!parentState.url && parentState.params.length > 0) {
+                throw "All parents of state '" + state.name +
                     "' which have params must provide a URL";
             }
         }
@@ -130,10 +130,10 @@ Ext.define('StateRouter.staterouter.StateManager', {
             curState = state;
 
         do {
-            if (curState.getConditions()) {
-                conditions = Ext.apply(conditions, curState.getConditions());
+            if (curState.conditions) {
+                conditions = Ext.apply(conditions, curState.conditions);
             }
-        } while ((curState = curState.getParent()) !== null);
+        } while ((curState = curState.parent) !== null);
 
         return conditions;
     },

@@ -92,7 +92,7 @@ Ext.define('StateRouter.staterouter.Router', {
 
         // If we registered a state with a URL, initialize ExtJS's History class
         // and mark the StateRouter as not ready
-        if (state.getUrl()) {
+        if (state.url) {
             if (!me.historyInitialized) {
                 me.ready = false;
                 me.historyInitialized = true;
@@ -119,14 +119,14 @@ Ext.define('StateRouter.staterouter.Router', {
         }
 
         this.stateManager.each(function (key, state) {
-            if (state.getAbsoluteUrlRegex()) {
-                matches = token.match(state.getAbsoluteUrlRegex());
+            if (state.absoluteUrlRegex) {
+                matches = token.match(state.absoluteUrlRegex);
                 if (matches !== null) {
 
                     curState = state;
                     do {
-                        allPositionalUrlParams = curState.getUrlParams().concat(allPositionalUrlParams);
-                    } while ((curState = curState.getParent()) !== null);
+                        allPositionalUrlParams = curState.urlParams.concat(allPositionalUrlParams);
+                    } while ((curState = curState.parent) !== null);
 
 
                     if (allPositionalUrlParams.length > 0) {
@@ -155,7 +155,7 @@ Ext.define('StateRouter.staterouter.Router', {
                         paramsObj[queryParam] = queryValue;
                     }
 
-                    me.transitionTo(state.getName(), paramsObj);
+                    me.transitionTo(state.name, paramsObj);
                     foundMatch = true;
                     return false;
                 }
@@ -374,7 +374,7 @@ Ext.define('StateRouter.staterouter.Router', {
             // transition away from the old view unless we're keeping everything.
             // For instance, going directly into a child view.
             if (me.currentPath !== null &&
-                me.toPath.lastNode().state.getView() &&
+                me.toPath.lastNode().state.view &&
                 me.keep < me.currentPath.nodes.length) {
 
                 // The "old" view in this case is the first view discarded.
@@ -398,7 +398,7 @@ Ext.define('StateRouter.staterouter.Router', {
                 // Because the last node may forward to a child and we do not know what the forwarded
                 // state is until the the resolvables are resolved, we only know the final
                 // state at this point (when forwardToChild)
-                transitionEvent.toState = me.toPath.lastNode().state.getName();
+                transitionEvent.toState = me.toPath.lastNode().state.name;
 
                 // Enter the new controllers
                 var startPromise = me.startNewControllers();
@@ -450,7 +450,7 @@ Ext.define('StateRouter.staterouter.Router', {
             // From the root until we've reached the end of the currentPath or newState path
             for (i = 0; i < toPath.length && i < fromPath.length; i++) {
 
-                if (reloadFromState && toPath[i].state.getName() === reload) {
+                if (reloadFromState && toPath[i].state.name === reload) {
                     break;
                 }
 
@@ -480,7 +480,7 @@ Ext.define('StateRouter.staterouter.Router', {
         if (!this.toPath) {
             return this.addHistoryToken('/');
         } else {
-            absoluteUrl = this.toPath.lastNode().state.getAbsoluteUrl();
+            absoluteUrl = this.toPath.lastNode().state.absoluteUrl;
             if (absoluteUrl !== null) {
 
                 allParams = Ext.apply({}, this.toPath.allParams);
@@ -555,7 +555,7 @@ Ext.define('StateRouter.staterouter.Router', {
 
     getCurrentState: function () {
         if (this.currentPath) {
-            return this.currentPath.lastNode().state.getName();
+            return this.currentPath.lastNode().state.name;
         }
         return null;
     },
@@ -580,21 +580,21 @@ Ext.define('StateRouter.staterouter.Router', {
             // Copy only the parameters defined in the StateDefinition
             var node = Ext.create('StateRouter.staterouter.PathNode', {
                 state: curState,
-                ownParams: Ext.copyTo({}, transitionParams, curState.getParams())
+                ownParams: Ext.copyTo({}, transitionParams, curState.params)
             });
 
             // Inherit params from the current path if the state name is equivalent
-            if (inherit && curState.getDepth() < this.currentPath.nodes.length) {
-                nodeToInheritFrom = this.currentPath.nodes[curState.getDepth()];
+            if (inherit && curState.depth < this.currentPath.nodes.length) {
+                nodeToInheritFrom = this.currentPath.nodes[curState.depth];
 
-                if (curState.getName() === nodeToInheritFrom.state.getName()) {
+                if (curState.name === nodeToInheritFrom.state.name) {
                     // Only inherit them if not already specified
                     Ext.applyIf(node.ownParams, nodeToInheritFrom.ownParams);
                 }
             }
 
             toPathNodes.push(node);
-        } while ((curState = curState.getParent()) !== null);
+        } while ((curState = curState.parent) !== null);
 
         // We want the array to be ordered from root to current state
         toPathNodes.reverse();
@@ -635,14 +635,14 @@ Ext.define('StateRouter.staterouter.Router', {
             node = this.toPath.nodes[i];
             state = node.state;
 
-            if (state.getController()) {
+            if (state.controller) {
                 if (!this.controllerProvider) {
-                    throw new Error("Cannot resolve controller '" + state.getController() + "'. controllerProvider undefined");
+                    throw new Error("Cannot resolve controller '" + state.controller + "'. controllerProvider undefined");
                 }
 
-                node.controller = this.controllerProvider(state.getController());
-            } else if (state.getViewController()) {
-                node.controller = Ext.create(state.getViewController());
+                node.controller = this.controllerProvider(state.controller);
+            } else if (state.viewController) {
+                node.controller = Ext.create(state.viewController);
             }
         }
     },
@@ -803,7 +803,7 @@ Ext.define('StateRouter.staterouter.Router', {
             ownParams = {},
             allParams;
 
-        forwardedStateName = currentLastNodeState.getForwardToChild()(currentLastNode.allParams, currentLastNode.resolved, currentLastNode.allResolved);
+        forwardedStateName = currentLastNodeState.forwardToChild(currentLastNode.allParams, currentLastNode.resolved, currentLastNode.allResolved);
 
         if (Ext.isObject(forwardedStateName)) {
             if (Ext.isObject(forwardedStateName.stateParams)) {
@@ -813,8 +813,8 @@ Ext.define('StateRouter.staterouter.Router', {
             forwardedStateName = forwardedStateName.stateName;
         }
 
-        if (!StateRouter.isChild(currentLastNodeState.getName(), forwardedStateName)) {
-            throw new Error('Forwarded state "' + forwardedStateName + '" not a child of "' + currentLastNodeState.getName() + '"');
+        if (!StateRouter.isChild(currentLastNodeState.name, forwardedStateName)) {
+            throw new Error('Forwarded state "' + forwardedStateName + '" not a child of "' + currentLastNodeState.name + '"');
         }
 
         forwardedState = this.stateManager.getState(forwardedStateName);
@@ -824,7 +824,7 @@ Ext.define('StateRouter.staterouter.Router', {
         }
 
         // Copy only the parameters defined in the StateDefinition
-        ownParams = Ext.copyTo({}, ownParams, forwardedState.getParams());
+        ownParams = Ext.copyTo({}, ownParams, forwardedState.params);
         allParams = Ext.apply({}, currentLastNode.allParams);
         allParams = Ext.applyIf(allParams, ownParams);
 
@@ -871,17 +871,17 @@ Ext.define('StateRouter.staterouter.Router', {
 
             // Notify all ancestors of the toPath's path that a new state is being activated
             me.doNotify(StateRouter.STATE_PATH_STARTING, {
-                state: state.getName()
+                state: state.name
             }, 0, i, toPath);
 
             me.insertChildIntoParentView(pathNode, i, toPath);
 
             if (controller) {
-                controller.stateName = state.getName();
+                controller.stateName = state.name;
 
                 if (controller && Ext.isFunction(controller[me.startFnName])) {
                     autoResolve = controller[me.startFnName].length < 3;
-                    chainStartPromise(controller, pathNode.allParams, state.getName(), autoResolve);
+                    chainStartPromise(controller, pathNode.allParams, state.name, autoResolve);
                 }
             }
         }
@@ -898,7 +898,7 @@ Ext.define('StateRouter.staterouter.Router', {
             allParams = pathNode.allParams,
             resolved = pathNode.resolved,
             previouslyResolved = pathNode.allResolved,
-            viewClass = state.getView(),
+            viewClass = state.view,
             viewComponent,
             parentComponent,
             viewConfig = {};
@@ -908,8 +908,8 @@ Ext.define('StateRouter.staterouter.Router', {
         // the start method.  So we don't need to do anything here.
         if (viewClass) {
             // If the view is actually a function, we need to execute it to determine the actual view class
-            if (Ext.isFunction(state.getView())) {
-                viewClass = state.getView()(allParams, resolved, previouslyResolved);
+            if (Ext.isFunction(state.view)) {
+                viewClass = state.view(allParams, resolved, previouslyResolved);
             }
 
             if (this.viewProcessorFn) {
@@ -927,10 +927,10 @@ Ext.define('StateRouter.staterouter.Router', {
                 toParams: allParams,
                 resolved: resolved,
                 allResolved: previouslyResolved,
-                stateName: state.getName()
+                stateName: state.name
             });
 
-            if (state.getViewController()) {
+            if (state.viewController) {
                 Ext.apply(viewConfig, {
                     controller: pathNode.controller
                 });

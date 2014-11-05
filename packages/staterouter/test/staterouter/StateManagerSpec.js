@@ -14,8 +14,8 @@ describe('StateManager', function() {
 
         state = manager.getState('a');
 
-        expect(new RegExp(state.getAbsoluteUrlRegex()).test('/a?sortable&enabled')).toBe(true);
-        expect(state.getParams()).toEqual(['enabled', 'sortable']);
+        expect(new RegExp(state.absoluteUrlRegex).test('/a?sortable&enabled')).toBe(true);
+        expect(state.params).toEqual(['enabled', 'sortable']);
     });
 
     it('should allow child states to have a URL with query params', function () {
@@ -32,12 +32,12 @@ describe('StateManager', function() {
         manager.getState('a');
         state = manager.getState('a.b');
 
-        expect(new RegExp(state.getAbsoluteUrlRegex()).test('/a/b')).toBe(true);
-        expect(new RegExp(state.getAbsoluteUrlRegex()).test('/a/b?sortable&enabled')).toBe(true);
-        expect(new RegExp(state.getAbsoluteUrlRegex()).test('/a/b?enabled&sortable')).toBe(true);
-        expect(new RegExp(state.getAbsoluteUrlRegex()).test('/a/b?joe&bob')).toBe(true);
-        expect(new RegExp(state.getAbsoluteUrlRegex()).test('/a/b?sortable')).toBe(true);
-        expect(new RegExp(state.getAbsoluteUrlRegex()).test('/a/b?enabled')).toBe(true);
-        expect(state.getParams()).toEqual(['hidden']);
+        expect(new RegExp(state.absoluteUrlRegex).test('/a/b')).toBe(true);
+        expect(new RegExp(state.absoluteUrlRegex).test('/a/b?sortable&enabled')).toBe(true);
+        expect(new RegExp(state.absoluteUrlRegex).test('/a/b?enabled&sortable')).toBe(true);
+        expect(new RegExp(state.absoluteUrlRegex).test('/a/b?joe&bob')).toBe(true);
+        expect(new RegExp(state.absoluteUrlRegex).test('/a/b?sortable')).toBe(true);
+        expect(new RegExp(state.absoluteUrlRegex).test('/a/b?enabled')).toBe(true);
+        expect(state.params).toEqual(['hidden']);
     });
 });

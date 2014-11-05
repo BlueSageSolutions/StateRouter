@@ -30,7 +30,7 @@ Ext.define('StateRouter.staterouter.PathNode', {
             throw "Other state undefined";
         }
 
-        if (this.state.getName() !== other.state.getName()) {
+        if (this.state.name !== other.state.name) {
             return false;
         }
 

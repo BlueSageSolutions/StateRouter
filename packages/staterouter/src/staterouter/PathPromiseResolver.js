@@ -3,7 +3,7 @@ Ext.define('StateRouter.staterouter.PathPromiseResolver', {
     chainPromise: function (previousPathNode, pathNode, existingPromise) {
         return existingPromise.then(function () {
             var promises = [];
-            var stateName = pathNode.state.getName();
+            var stateName = pathNode.state.name;
             var controller = pathNode.controller;
             var resolved = {};
             var previouslyResolved = {};
