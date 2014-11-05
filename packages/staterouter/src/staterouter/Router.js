@@ -259,13 +259,13 @@ Ext.define('StateRouter.staterouter.Router', {
             resolveBeforeTransition = [],
             transitionEvent,
             lastNodeForwarding,
-            historyPromise = new RSVP.Promise(function (resolve) { resolve(); }),
+            historyPromise = new RSVP.resolve(),
             reload = false,
             force = Ext.isObject(options) && options.force === true,
             keepUrl = Ext.isObject(options) && options.keepUrl === true;
 
-        var readyPromise = new RSVP.Promise(function (resolve) { resolve(); });
-        var didNotTransitionPromise = new RSVP.Promise(function (resolve) { resolve(false); });
+        var readyPromise = new RSVP.resolve();
+        var didNotTransitionPromise = new RSVP.resolve(false);
 
         if (options) {
 
@@ -474,7 +474,7 @@ Ext.define('StateRouter.staterouter.Router', {
             allParams;
 
         if (!me.historyInitialized) {
-            return new RSVP.Promise(function (resolve) { resolve(); });
+            return new RSVP.resolve();
         }
 
         if (!this.toPath) {
@@ -524,7 +524,7 @@ Ext.define('StateRouter.staterouter.Router', {
     addHistoryToken: function (token) {
         // If the history isn't changing, return a fulfilled promise immediately
         if (Ext.History.getToken() === token) {
-            return new RSVP.Promise(function (resolve) { resolve(); });
+            return new RSVP.resolve();
         }
 
         // Otherwise, we expect the history to change
@@ -711,15 +711,13 @@ Ext.define('StateRouter.staterouter.Router', {
         if (this.app) {
             return this.app.fireEvent(eventName, eventObj);
         }
-        return;
     },
 
     createStopAndResolvePromise: function () {
         var me = this;
-        var promise = this.stopDiscardedControllers().then(function () {
+        return this.stopDiscardedControllers().then(function () {
             return me.resolveAllAndForwardIfNecessary();
         });
-        return promise;
     },
 
     stopDiscardedControllers: function () {
@@ -737,7 +735,7 @@ Ext.define('StateRouter.staterouter.Router', {
             });
         }
 
-        r = new RSVP.Promise(function (resolve) { resolve(); });
+        r = new RSVP.resolve();
 
         if (me.currentPath !== null) {
             fromPath = me.currentPath.nodes;
@@ -846,7 +844,23 @@ Ext.define('StateRouter.staterouter.Router', {
             i,
             pathNode,
             stateDefinition,
-            controller;
+            controller,
+            autoResolve;
+
+        var promise = RSVP.resolve();
+
+        function chainStartPromise(theController, allParams, stateName, autoResolve) {
+            promise = promise.then(function () {
+                return new RSVP.Promise(function (resolve, reject) {
+                    if (autoResolve) {
+                        Ext.callback(theController[me.startFnName], theController, [allParams, stateName]);
+                        resolve();
+                    } else {
+                        Ext.callback(theController[me.startFnName], theController, [allParams, stateName, resolve, reject]);
+                    }
+                });
+            });
+        }
 
         for (i = this.keep; i < toPath.length; i++) {
             pathNode = toPath[i];
@@ -864,12 +878,15 @@ Ext.define('StateRouter.staterouter.Router', {
 
             if (controller) {
                 controller.stateName = stateDefinition.getName();
-                Ext.callback(controller[me.startFnName], controller, [pathNode.allParams, stateDefinition.getName()]);
+
+                if (controller && Ext.isFunction(controller[me.startFnName])) {
+                    autoResolve = controller[me.startFnName].length < 3;
+                    chainStartPromise(controller, pathNode.allParams, stateDefinition.getName(), autoResolve);
+                }
             }
         }
 
-        // In the future, controller start methods may use promises
-        return new RSVP.Promise(function (resolve) { resolve(); });
+        return promise;
     },
 
 

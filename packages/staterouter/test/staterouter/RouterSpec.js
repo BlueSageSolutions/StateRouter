@@ -565,6 +565,47 @@ describe("Router", function() {
             });
         });
 
+        it("should only proceed with controller start if resolved", function (done) {
+
+            var resolveFn;
+
+            router.configure({controllerProvider: function () {
+                return {
+                    start: function (allParams, stateName, resolve, reject) {
+                        resolveFn = resolve;
+                    }
+                };
+            }});
+            router.state('state1', {controller: 'DoesntMatter'});
+            router.go('state1').then(function () {
+                done();
+            });
+
+            setTimeout(function () {
+                expect(router.getCurrentState()).toBeNull();
+                resolveFn();
+            }, 10);
+
+        });
+
+        it("should allow user to reject starting a controller", function (done) {
+            router.configure({controllerProvider: function () {
+                // always return a single controller
+                return {
+                    start: function (allParams, stateName, resolve, reject) {
+                        reject('rejected!');
+                    }
+                };
+            }});
+            router.state('state1', {controller: 'DoesntMatter'});
+            router.go('state1').then(function () {
+                console.log('should never be here');
+            }, function (error) {
+                expect(error).toBe('rejected!');
+                done();
+            });
+        });
+
         it("should stop a controller when entering a state", function (done) {
             var value;
 
