@@ -25,7 +25,7 @@ describe("PathPromiseResolver", function() {
         stateManager.register('main');
 
         path.push(Ext.create('StateRouter.staterouter.PathNode', {
-            state: stateManager.getStateDefinition('main'),
+            state: stateManager.getState('main'),
             controller: {}
         }));
 
@@ -52,7 +52,7 @@ describe("PathPromiseResolver", function() {
         stateManager.register('main');
 
         path.push(Ext.create('StateRouter.staterouter.PathNode', {
-            state: stateManager.getStateDefinition('main'),
+            state: stateManager.getState('main'),
             controller: controller
         }));
 
@@ -106,11 +106,11 @@ describe("PathPromiseResolver", function() {
         stateManager.register('main.home');
 
         path.push(Ext.create('StateRouter.staterouter.PathNode', {
-            state: stateManager.getStateDefinition('main'),
+            state: stateManager.getState('main'),
             controller: keptController
         }));
         path.push(Ext.create('StateRouter.staterouter.PathNode', {
-            state: stateManager.getStateDefinition('main.home'),
+            state: stateManager.getState('main.home'),
             controller: newController
         }));
 
@@ -148,14 +148,14 @@ describe("PathPromiseResolver", function() {
 
         path = [
             Ext.create('StateRouter.staterouter.PathNode', {
-                state: stateManager.getStateDefinition('a'),
+                state: stateManager.getState('a'),
                 controller: a
             }),
             Ext.create('StateRouter.staterouter.PathNode', {
-                state: stateManager.getStateDefinition('a.b')
+                state: stateManager.getState('a.b')
             }),
             Ext.create('StateRouter.staterouter.PathNode', {
-                state: stateManager.getStateDefinition('a.b.c'),
+                state: stateManager.getState('a.b.c'),
                 controller: c
             })
         ];
@@ -263,7 +263,7 @@ describe("PathPromiseResolver", function() {
 
         oldPath = [
             Ext.create('StateRouter.staterouter.PathNode', {
-                state: stateManager.getStateDefinition('a'),
+                state: stateManager.getState('a'),
                 controller: controllerA
             })
         ];
@@ -280,15 +280,15 @@ describe("PathPromiseResolver", function() {
 
             newPath = [
                 Ext.create('StateRouter.staterouter.PathNode', {
-                    state: stateManager.getStateDefinition('a'),
+                    state: stateManager.getState('a'),
                     controller: controllerA
                 }),
                 Ext.create('StateRouter.staterouter.PathNode', {
-                    state: stateManager.getStateDefinition('a.b'),
+                    state: stateManager.getState('a.b'),
                     controller: controllerB
                 }),
                 Ext.create('StateRouter.staterouter.PathNode', {
-                    state: stateManager.getStateDefinition('a.b.c'),
+                    state: stateManager.getState('a.b.c'),
                     controller: controllerC
                 })
             ];
@@ -356,7 +356,7 @@ describe("PathPromiseResolver", function() {
 
         path = [
             Ext.create('StateRouter.staterouter.PathNode', {
-                state: stateManager.getStateDefinition('a'),
+                state: stateManager.getState('a'),
                 controller: a,
                 ownParams: {
                     user: 'bob'
@@ -366,7 +366,7 @@ describe("PathPromiseResolver", function() {
                 }
             }),
             Ext.create('StateRouter.staterouter.PathNode', {
-                state: stateManager.getStateDefinition('a.b'),
+                state: stateManager.getState('a.b'),
                 controller: b,
                 ownParams: {
                     id: '1',

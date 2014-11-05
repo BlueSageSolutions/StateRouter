@@ -1,4 +1,4 @@
-Ext.define('StateRouter.staterouter.StateDefinition', {
+Ext.define('StateRouter.staterouter.State', {
 
     $configPrefixed: false,
 

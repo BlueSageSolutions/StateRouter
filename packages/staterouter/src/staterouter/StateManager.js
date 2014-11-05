@@ -20,18 +20,18 @@ Ext.define('StateRouter.staterouter.StateManager', {
         return Ext.Object.each(this.states, fn, scope);
     },
 
-    hasStateDefinition: function (stateName) {
+    hasState: function (stateName) {
         return this.states.hasOwnProperty(stateName);
     },
 
-    getStateDefinition: function (stateName) {
+    getState: function (stateName) {
         return this.states[stateName];
     },
 
     register: function (configOrName, optConfig) {
         var me = this,
             newStateConfig = optConfig || {},
-            newStateDefinition,
+            newState,
             parentStateName,
             lastPeriodIndex,
             urlParserResult,
@@ -44,36 +44,36 @@ Ext.define('StateRouter.staterouter.StateManager', {
         }
 
         // Now build the state
-        newStateDefinition = Ext.create('StateRouter.staterouter.StateDefinition', newStateConfig);
+        newState = Ext.create('StateRouter.staterouter.State', newStateConfig);
 
-        if (!newStateDefinition.getName()) {
+        if (!newState.getName()) {
             throw "State requires 'name'";
         }
 
         // Determine if this is a child state and if so verify and set the parent
-        lastPeriodIndex = newStateDefinition.getName().lastIndexOf('.');
+        lastPeriodIndex = newState.getName().lastIndexOf('.');
 
         // Extract the parent from the name
         if (lastPeriodIndex === -1) {
-            newStateDefinition.setParent(null);
-            newStateDefinition.setDepth(0);
+            newState.setParent(null);
+            newState.setDepth(0);
         } else {
-            parentStateName = newStateDefinition.getName().slice(0, lastPeriodIndex);
+            parentStateName = newState.getName().slice(0, lastPeriodIndex);
 
             if (!me.states.hasOwnProperty(parentStateName)) {
                 throw "Parent '" + parentStateName + "' not found";
             }
 
-            newStateDefinition.setParent(me.states[parentStateName]);
-            newStateDefinition.setDepth(me.states[parentStateName].getDepth());
+            newState.setParent(me.states[parentStateName]);
+            newState.setDepth(me.states[parentStateName].getDepth());
         }
 
         // If URL is specified, the URL parameters will override the 'params' property
-        if (newStateDefinition.getUrl()) {
+        if (newState.getUrl()) {
 
             // Since this state can be navigated to via a URL,
             // all parents which have params must provide URLs
-            me.verifyAllParentsNavigable(newStateDefinition);
+            me.verifyAllParentsNavigable(newState);
 
             // First, split the URL into its base and query parts
             // /abc/:param?a&b
@@ -83,57 +83,57 @@ Ext.define('StateRouter.staterouter.StateManager', {
             //    baseUrl: /abc/:param
             //    queryParams: ['a', 'b']
             // }
-            splitUrlResult = this.urlParser.splitUrl(newStateDefinition.getUrl());
+            splitUrlResult = this.urlParser.splitUrl(newState.getUrl());
 
-            newStateDefinition.setQueryParams(splitUrlResult.queryParams);
+            newState.setQueryParams(splitUrlResult.queryParams);
 
             // Build the full baseUrl path from the root state (not including query params)
-            newStateDefinition.setAbsoluteUrl(splitUrlResult.baseUrl);
-            if (newStateDefinition.getParent() && newStateDefinition.getParent().getUrl()) {
-                newStateDefinition.setAbsoluteUrl(newStateDefinition.getParent().getAbsoluteUrl() + newStateDefinition.getAbsoluteUrl());
+            newState.setAbsoluteUrl(splitUrlResult.baseUrl);
+            if (newState.getParent() && newState.getParent().getUrl()) {
+                newState.setAbsoluteUrl(newState.getParent().getAbsoluteUrl() + newState.getAbsoluteUrl());
             }
 
             // We call the parser twice, once with the full path to this state, including all parents baseUrls
             // This gives us our regex so we can test if a user entered full URL matches this state
-            urlParserResult = this.urlParser.parse(newStateDefinition.getAbsoluteUrl(), me.getAllUrlParamConditions(newStateDefinition));
-            newStateDefinition.setAbsoluteUrlRegex(urlParserResult.regex);
+            urlParserResult = this.urlParser.parse(newState.getAbsoluteUrl(), me.getAllUrlParamConditions(newState));
+            newState.setAbsoluteUrlRegex(urlParserResult.regex);
 
             // Next, we pass just the partial URL for this specific state to the urlParser, this is just a simple
             // way to extract the URL position based parameters solely for this state
             urlParserResult = this.urlParser.parse(splitUrlResult.baseUrl);
-            newStateDefinition.setUrlParams(urlParserResult.params);
+            newState.setUrlParams(urlParserResult.params);
 
-            newStateDefinition.setParams(newStateDefinition.getUrlParams().concat(newStateDefinition.getQueryParams()));
+            newState.setParams(newState.getUrlParams().concat(newState.getQueryParams()));
         }
 
-        me.states[newStateDefinition.getName()] = newStateDefinition;
+        me.states[newState.getName()] = newState;
 
-        me.fireEvent('stateregistered', newStateDefinition);
+        me.fireEvent('stateregistered', newState);
         return me;
     },
 
-    verifyAllParentsNavigable: function (stateDef) {
-        var parent = stateDef;
+    verifyAllParentsNavigable: function (state) {
+        var parent = state;
 
         // Ensure all parent nodes that have at least one parameter specify a URL
         while ((parent = parent.getParent()) !== null) {
 
             if (!parent.getUrl() && parent.getParams().length > 0) {
-                throw "All parents of state '" + stateDef.getName() +
+                throw "All parents of state '" + state.getName() +
                     "' which have params must provide a URL";
             }
         }
     },
 
-    getAllUrlParamConditions: function (stateDef) {
+    getAllUrlParamConditions: function (state) {
         var conditions = {},
-            curStateDef = stateDef;
+            curState = state;
 
         do {
-            if (curStateDef.getConditions()) {
-                conditions = Ext.apply(conditions, curStateDef.getConditions());
+            if (curState.getConditions()) {
+                conditions = Ext.apply(conditions, curState.getConditions());
             }
-        } while ((curStateDef = curStateDef.getParent()) !== null);
+        } while ((curState = curState.getParent()) !== null);
 
         return conditions;
     },

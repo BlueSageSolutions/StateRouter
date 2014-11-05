@@ -46,15 +46,15 @@ describe("Router", function() {
         it("should allow you to specify name as first param or in config", function () {
 
             router.state('state1');
-            expect(router.stateManager.getStateDefinition('state1')).not.toBeUndefined();
-            expect(router.stateManager.getStateDefinition('state1')).not.toBeNull();
+            expect(router.stateManager.getState('state1')).not.toBeUndefined();
+            expect(router.stateManager.getState('state1')).not.toBeNull();
 
             router.state({
                 name: 'state2'
             });
 
-            expect(router.stateManager.getStateDefinition('state2')).not.toBeUndefined();
-            expect(router.stateManager.getStateDefinition('state2')).not.toBeNull();
+            expect(router.stateManager.getState('state2')).not.toBeUndefined();
+            expect(router.stateManager.getState('state2')).not.toBeNull();
         });
 
         xit("should call controllerProcessor if defined to obtain controller name", function (done) {
@@ -174,7 +174,7 @@ describe("Router", function() {
             var expectedPath = Ext.create('StateRouter.staterouter.Path', {
                 nodes:  [
                     Ext.create('StateRouter.staterouter.PathNode', {
-                        state: router.stateManager.getStateDefinition('a'),
+                        state: router.stateManager.getState('a'),
                         ownParams: { id: 5 },
                         allParams: { id: 5 }
                     })
@@ -190,17 +190,17 @@ describe("Router", function() {
             expectedPath = Ext.create('StateRouter.staterouter.Path', {
                 nodes:  [
                     Ext.create('StateRouter.staterouter.PathNode', {
-                        state: router.stateManager.getStateDefinition('a'),
+                        state: router.stateManager.getState('a'),
                         ownParams: { id: 5 },
                         allParams: { id: 5 }
                     }),
                     Ext.create('StateRouter.staterouter.PathNode', {
-                        state: router.stateManager.getStateDefinition('a.b'),
+                        state: router.stateManager.getState('a.b'),
                         ownParams: {},
                         allParams: { id: 5 }
                     }),
                     Ext.create('StateRouter.staterouter.PathNode', {
-                        state: router.stateManager.getStateDefinition('a.b.c'),
+                        state: router.stateManager.getState('a.b.c'),
                         ownParams: { cId: 'hello' },
                         allParams: { id: 5, cId: 'hello' }
                     })

@@ -1,23 +1,23 @@
 describe("Path", function() {
 
     it("should be equal to other state if entire path is equal", function() {
-        var mainDef,
-            mainContactDef,
-            mainContactAddressDef,
-            fromState,
-            toState;
+        var mainState,
+            mainContactState,
+            mainContactAddressState,
+            fromPath,
+            toPath;
 
 
-        mainDef = Ext.create('StateRouter.staterouter.StateDefinition', {
+        mainState = Ext.create('StateRouter.staterouter.State', {
             name: 'main'
         });
 
-        mainContactDef = Ext.create('StateRouter.staterouter.StateDefinition', {
+        mainContactState = Ext.create('StateRouter.staterouter.State', {
             name: 'main.contact',
             params: ['id']
         });
 
-        mainContactAddressDef = Ext.create('StateRouter.staterouter.StateDefinition', {
+        mainContactAddressState = Ext.create('StateRouter.staterouter.State', {
             name: 'main.contact.address',
             params: ['addressId']
         });
@@ -29,29 +29,29 @@ describe("Path", function() {
             return node;
         }
 
-        fromState = Ext.create('StateRouter.staterouter.Path');
-        fromState.nodes = [
-            createNode(null, mainDef),
+        fromPath = Ext.create('StateRouter.staterouter.Path');
+        fromPath.nodes = [
+            createNode(null, mainState),
             createNode({
                 id: 1
-            }, mainContactDef),
+            }, mainContactState),
             createNode({
                 addressId: 10
-            }, mainContactAddressDef)
+            }, mainContactAddressState)
         ];
 
-        toState = Ext.create('StateRouter.staterouter.Path');
-        toState.nodes = [
-            createNode(null, mainDef),
+        toPath = Ext.create('StateRouter.staterouter.Path');
+        toPath.nodes = [
+            createNode(null, mainState),
             createNode({
                 id: 1
-            }, mainContactDef),
+            }, mainContactState),
             createNode({
                 addressId: 10
-            }, mainContactAddressDef)
+            }, mainContactAddressState)
         ];
 
-        expect(fromState.isEqual(toState)).toBe(true);
+        expect(fromPath.isEqual(toPath)).toBe(true);
     });
 
     describe("View Tests", function () {

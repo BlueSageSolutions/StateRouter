@@ -1,7 +1,7 @@
 Ext.define('StateRouter.staterouter.PathNode', {
 
     requires: [
-        'StateRouter.staterouter.StateDefinition'
+        'StateRouter.staterouter.State'
     ],
 
     state: null,

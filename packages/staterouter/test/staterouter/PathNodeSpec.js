@@ -3,7 +3,7 @@ describe("PathNode", function() {
     it("should be equal to other path nodes if same parameter and definition name", function() {
 
 
-        var stateDef = Ext.create('StateRouter.staterouter.StateDefinition', {
+        var state = Ext.create('StateRouter.staterouter.State', {
             name: 'contacts'
         });
 
@@ -12,7 +12,7 @@ describe("PathNode", function() {
                 id: 1,
                 name: 'Toast'
             },
-            state: stateDef
+            state: state
         });
 
         var pathNode2 = Ext.create('StateRouter.staterouter.PathNode', {
@@ -20,7 +20,7 @@ describe("PathNode", function() {
                 id: 1,
                 name: 'Toast'
             },
-            state: stateDef
+            state: state
         });
 
         expect(pathNode.isEqual(pathNode2)).toBe(true);
@@ -29,7 +29,7 @@ describe("PathNode", function() {
     it("should not be equal even if one path node is a superset of another", function() {
 
 
-        var stateDef = Ext.create('StateRouter.staterouter.StateDefinition', {
+        var state = Ext.create('StateRouter.staterouter.State', {
             name: 'contacts'
         });
 
@@ -39,7 +39,7 @@ describe("PathNode", function() {
                 id: 1,
                 name: 'Toast'
             },
-            state: stateDef
+            state: state
         });
 
         var pathNode2 = Ext.create('StateRouter.staterouter.PathNode', {
@@ -48,7 +48,7 @@ describe("PathNode", function() {
                 name: 'Toast',
                 anotherParam: 'Bob'
             },
-            state: stateDef
+            state: state
         });
 
         expect(pathNode.isEqual(pathNode2)).toBe(false);

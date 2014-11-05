@@ -1,5 +1,5 @@
 /**
- * A path of nodes each bound to a state definition used to specify a specific application state.
+ * A path of nodes each bound to a state used to specify a specific application state.
  */
 Ext.define('StateRouter.staterouter.Path', {
 
