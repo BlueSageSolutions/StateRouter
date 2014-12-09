@@ -304,6 +304,54 @@ describe("Router", function() {
             });
         });
 
+        it("should allow you to access the controller via the utility method getControllerForCurrentState", function (done) {
+            var c1 = {
+                getMyName: function () {
+                    return 'state1Controller';
+                }
+            };
+            var c2 = {
+                getMyName: function () {
+                    return 'homeController';
+                }
+            };
+            var c3 = {
+                getMyName: function () {
+                    return 'contactController';
+                }
+            };
+
+            router.state('state1', {
+                controller: 'c1'
+            });
+            router.state('state1.home', {
+                controller: 'c2'
+            });
+            router.state('state1.home.contact', {
+                controller: 'c3'
+            });
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === 'c1') {
+                        return c1;
+                    }
+                    if (name === 'c2') {
+                        return c2;
+                    }
+                    if (name === 'c3') {
+                        return c3;
+                    }
+                    return null;
+                }
+            });
+            router.go('state1.home.contact').then(function () {
+                console.log('I got here');
+                expect(router.getControllerForCurrentState()).not.toBeUndefined();
+                expect(router.getControllerForCurrentState().getMyName()).toBe('contactController');
+                done();
+            });
+        });
+
         it("should allow controllers to cancel a transition", function (done) {
             var c1 = {
 

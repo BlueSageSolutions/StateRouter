@@ -944,6 +944,24 @@ Ext.define('StateRouter.staterouter.Router', {
             me.transition.transitionTo(viewComponent, pathNode, nodeIndex, this.keep, path);
             pathNode.registerView(viewComponent);
         }
+    },
+
+    /**
+     * Returns the controller for the last node in the current path, or null if no current path or
+     * no controller defined
+     */
+    getControllerForCurrentState: function () {
+        var lastNode;
+
+        if (this.currentPath) {
+            lastNode = this.currentPath.lastNode();
+
+            if (lastNode) {
+                return lastNode.controller;
+            }
+        }
+
+        return null;
     }
 },
     function () {
@@ -994,6 +1012,10 @@ Ext.define('StateRouter.staterouter.Router', {
 
     StateRouter.getStateManager = function () {
         return StateRouter.Router.stateManager;
+    };
+
+    StateRouter.getControllerForCurrentState = function () {
+        return StateRouter.Router.getControllerForCurrentState();
     };
 
 
