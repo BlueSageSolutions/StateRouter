@@ -535,6 +535,25 @@ describe("Router", function() {
             });
         });
 
+        it("should allow one state to forward to deep child state", function (done) {
+
+            router.state('state1', {});
+            router.state('state1.contact', {
+                forwardToChild: function () {
+                    return 'state1.contact.summary.a.b.c';
+                }
+            });
+            router.state('state1.contact.summary', {});
+            router.state('state1.contact.summary.a', {});
+            router.state('state1.contact.summary.a.b', {});
+            router.state('state1.contact.summary.a.b.c', {});
+            router.state('state2', {});
+            router.go('state1.contact').then(function () {
+                expect(router.getCurrentState()).toBe('state1.contact.summary.a.b.c');
+                done();
+            });
+        });
+
         it("should send the forwarded state name in the STATE_CHANGED event, but not STATE_CHANGE_REQUEST", function (done) {
             var toStateRequest,
                 toStateChange,
@@ -1302,6 +1321,68 @@ describe("Router", function() {
                 done();
             });
         });
+
+        it("should allow forwardToChild to return additional parameters for deep forwarded child", function (done) {
+            var bParams;
+            var cParams;
+
+            router.configure({controllerProvider: function (name) {
+                if (name === 'a') {
+                    return {};
+                }
+                if (name === 'a.b') {
+                    return {
+                        start: function (stateParams) {
+                            bParams = stateParams;
+                        }
+                    };
+                }
+                if (name === 'a.b.c') {
+                    return {
+                        start: function (stateParams) {
+                            cParams = stateParams;
+                        }
+                    };
+                }
+                return {};
+            }});
+            router.state('a', {
+                controller: 'a',
+                forwardToChild: function (params, resolved) {
+                    return {
+                        stateName: 'a.b.c',
+                        stateParams: {
+                            bId: 444,
+                            cId: 555,
+                            notACParams: 666
+                        }
+                    };
+                }
+            }).state('a.b', {
+                controller: 'a.b',
+                params: ['bId']
+
+            }).state('a.b.c', {
+                controller: 'a.b.c',
+                params: ['cId']
+            });
+
+            router.go('a').then(function() {
+                expect(router.getCurrentState()).toBe('a.b.c');
+                expect(router.getCurrentStateParams()).toEqual({
+                    bId: 444,
+                    cId: 555
+                });
+                expect(bParams).toEqual({
+                    bId: 444
+                });
+                expect(cParams).toEqual({
+                    bId: 444,
+                    cId: 555
+                });
+                done();
+            });
+        });
     });
 
     describe("View Controllers", function () {
@@ -1678,6 +1759,81 @@ describe("Router", function() {
             router.state('state1.child1', {controller: 'controller2'});
             router.go('state1').then(function () {
                 expect(router.getCurrentState()).toBe('state1.child1');
+                done();
+            });
+        });
+
+        it("should resolve child state resolves when forwarding to deep child", function (done) {
+            var controller1 = {
+                    resolve: {
+                        a: function (resolve) {
+                            resolve('a');
+                        },
+                        b: function (resolve) {
+                            resolve('b');
+                        },
+                        c: function (resolve) {
+                            resolve('c');
+                        }
+                    }
+                },
+                controller2 = {
+                    resolve: {
+                        d: function (resolve) {
+                            setTimeout(function () {
+                                resolve('d');
+                            }, 100);
+                        }
+                    }
+                },
+                controller3 = {
+                    resolve: {
+                        e: function (resolve) {
+                            resolve('e');
+                        }
+                    }
+                },
+                controller4 = {
+                    resolve: {
+                        f: function (resolve) {
+                            resolve('f');
+                        }
+                    },
+                    start: function () {
+                        console.log('ALL RESOLVED = ');
+                        console.log(this.allResolved);
+                    }
+                };
+
+            router.configure({controllerProvider: function (name) {
+                if (name === 'controller1') {
+                    return controller1;
+                }
+                if (name === 'controller2') {
+                    return controller2;
+                }
+                if (name === 'controller3') {
+                    return controller3;
+                }
+                if (name === 'controller4') {
+                    return controller4;
+                }
+                return null;
+            }});
+            router.state('state1', {
+                controller: 'controller1',
+                forwardToChild: function (params, resolved) {
+                    expect(resolved.a).toBe('a');
+                    expect(resolved.b).toBe('b');
+                    expect(resolved.c).toBe('c');
+                    return 'state1.child1.child2.child3';
+                }
+            });
+            router.state('state1.child1', {controller: 'controller2', params: ['cId']});
+            router.state('state1.child1.child2', {controller: 'controller3'});
+            router.state('state1.child1.child2.child3', {controller: 'controller4'});
+            router.go('state1').then(function () {
+                expect(router.getCurrentState()).toBe('state1.child1.child2.child3');
                 done();
             });
         });

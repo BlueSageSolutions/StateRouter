@@ -774,17 +774,17 @@ Ext.define('StateRouter.staterouter.Router', {
         var me = this,
             toPathNodes = this.toPath.nodes,
             resolveAllPromise;
+        var numNodes = toPathNodes.length;
 
         resolveAllPromise = me.promiseResolver.createResolvePromise(toPathNodes, this.keep);
 
         // If the last node forwards to a child, then we want to append the child state
         // to the path and chain one final promise to resolve the forwarded controller's dependencies
         if (this.isLastNodeForwarding()) {
-
             resolveAllPromise = resolveAllPromise.then(function () {
                 me.appendForwardedNode();
-                me.updateControllersForPath(toPathNodes.length - 1);
-                return me.promiseResolver.createResolvePromise(toPathNodes, toPathNodes.length - 1);
+                me.updateControllersForPath(numNodes);
+                return me.promiseResolver.createResolvePromise(toPathNodes, numNodes);
             });
         }
 
@@ -798,16 +798,18 @@ Ext.define('StateRouter.staterouter.Router', {
     appendForwardedNode: function () {
         var currentLastNode = this.toPath.lastNode(),
             currentLastNodeState = currentLastNode.state,
+            currentDepth = currentLastNodeState.depth,
             forwardedStateName,
             forwardedState,
-            ownParams = {},
-            allParams;
+            forwardedParams = {},
+            ownParams,
+            node;
 
         forwardedStateName = currentLastNodeState.forwardToChild(currentLastNode.allParams, currentLastNode.resolved, currentLastNode.allResolved);
 
         if (Ext.isObject(forwardedStateName)) {
             if (Ext.isObject(forwardedStateName.stateParams)) {
-                ownParams = forwardedStateName.stateParams;
+                forwardedParams = forwardedStateName.stateParams;
             }
 
             forwardedStateName = forwardedStateName.stateName;
@@ -823,19 +825,29 @@ Ext.define('StateRouter.staterouter.Router', {
             throw new Error('Forwarded state not found');
         }
 
-        // Copy only the parameters defined in the StateDefinition
-        ownParams = Ext.copyTo({}, ownParams, forwardedState.params);
-        allParams = Ext.apply({}, currentLastNode.allParams);
-        allParams = Ext.applyIf(allParams, ownParams);
+        while (forwardedState.name !== currentLastNodeState.name) {
 
-        var node = Ext.create('StateRouter.staterouter.PathNode', {
-            state: forwardedState,
-            ownParams: ownParams,
-            allParams: allParams
-        });
+            // Copy only the parameters defined in the StateDefinition
+            ownParams = Ext.copyTo({}, forwardedParams, forwardedState.params);
 
-        this.toPath.allParams = allParams;
-        this.toPath.nodes.push(node);
+            node = Ext.create('StateRouter.staterouter.PathNode', {
+                state: forwardedState,
+                ownParams: ownParams
+            });
+
+            this.toPath.nodes.splice(currentDepth + 1, 0, node);
+
+            forwardedState = forwardedState.parent;
+        }
+
+        // Set the all params for the newly created nodes
+        for (var i = currentDepth + 1; i < this.toPath.nodes.length; i++) {
+            node = this.toPath.nodes[i];
+            node.allParams = Ext.apply({}, this.toPath.nodes[i - 1].allParams);
+            node.allParams = Ext.applyIf(node.allParams, node.ownParams);
+        }
+
+        this.toPath.allParams = this.toPath.lastNode().allParams;
     },
 
     startNewControllers: function () {
