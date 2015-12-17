@@ -396,9 +396,10 @@ Ext.define('StateRouter.staterouter.Router', {
                 }
 
                 // Because the last node may forward to a child and we do not know what the forwarded
-                // state is until the the resolvables are resolved, we only know the final
-                // state at this point (when forwardToChild)
+                // state is until the resolvables are resolved, we only know the final
+                // state at this point (after forwardToChild is executed)
                 transitionEvent.toState = me.toPath.lastNode().state.name;
+                transitionEvent.toParams = me.toPath.lastNode().allParams;
 
                 // Enter the new controllers
                 var startPromise = me.startNewControllers();
