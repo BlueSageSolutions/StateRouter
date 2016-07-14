@@ -57,6 +57,18 @@ describe("Router", function() {
             expect(router.stateManager.getState('state2')).not.toBeNull();
         });
 
+        it("should allow you to configure an array of states", function () {
+
+            router.state([
+                {name: 'state1'},
+                {name: 'state2'}
+            ]);
+            expect(router.stateManager.getState('state1')).not.toBeUndefined();
+            expect(router.stateManager.getState('state1')).not.toBeNull();
+            expect(router.stateManager.getState('state2')).not.toBeUndefined();
+            expect(router.stateManager.getState('state2')).not.toBeNull();
+        });
+
         xit("should call controllerProcessor if defined to obtain controller name", function (done) {
             var which,
                 desktopController = {
@@ -516,6 +528,18 @@ describe("Router", function() {
                     expect(router.getCurrentState()).toBe('state1.home');
                     done();
                 });
+            });
+        });
+
+        it("should allow one state to forward to another state by name", function (done) {
+
+            router.state('state1', {});
+            router.state('state1.contact', { forwardToChild: 'state1.contact.summary' });
+            router.state('state1.contact.summary', {});
+            router.state('state2', {});
+            router.go('state1.contact').then(function () {
+                expect(router.getCurrentState()).toBe('state1.contact.summary');
+                done();
             });
         });
 

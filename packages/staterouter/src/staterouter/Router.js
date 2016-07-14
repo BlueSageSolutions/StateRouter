@@ -204,7 +204,29 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     state: function (configOrName, optConfig) {
-        this.stateManager.register(configOrName, optConfig);
+        var me = this;
+        
+        if (Ext.isArray(configOrName)) {
+            Ext.each(configOrName, function (stateConfig) {
+                me.stateManager.register(stateConfig);
+            });
+        } else {
+            this.stateManager.register(configOrName, optConfig);
+        }
+        
+        return this;
+    },
+
+    merge: function (configOrName, optConfig) {
+        var me = this;
+        if (Ext.isArray(configOrName)) {
+            Ext.each(configOrName, function (conf) {
+                me.stateManager.merge(conf);
+            });
+        } else {
+            this.stateManager.merge(configOrName, optConfig);
+        }
+        
         return this;
     },
 
@@ -793,20 +815,23 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     isLastNodeForwarding: function () {
-        return Ext.isFunction(this.toPath.lastNode().state.forwardToChild);
+        // If the property is not undefined
+        return this.toPath.lastNode().state.forwardToChild;
     },
 
     appendForwardedNode: function () {
         var currentLastNode = this.toPath.lastNode(),
             currentLastNodeState = currentLastNode.state,
             currentDepth = currentLastNodeState.depth,
-            forwardedStateName,
+            forwardedStateName = currentLastNodeState.forwardToChild,
             forwardedState,
             forwardedParams = {},
             ownParams,
             node;
 
-        forwardedStateName = currentLastNodeState.forwardToChild(currentLastNode.allParams, currentLastNode.resolved, currentLastNode.allResolved);
+        if (Ext.isFunction(currentLastNodeState.forwardToChild)) {
+            forwardedStateName = currentLastNodeState.forwardToChild(currentLastNode.allParams, currentLastNode.resolved, currentLastNode.allResolved);
+        }
 
         if (Ext.isObject(forwardedStateName)) {
             if (Ext.isObject(forwardedStateName.stateParams)) {
@@ -1001,6 +1026,10 @@ Ext.define('StateRouter.staterouter.Router', {
 
     StateRouter.state = function(configOrName, optConfig) {
         return StateRouter.Router.state(configOrName, optConfig);
+    };
+
+    StateRouter.merge = function(configOrName, optConfig) {
+        return StateRouter.Router.merge(configOrName, optConfig);
     };
 
     StateRouter.reload = function(options) {

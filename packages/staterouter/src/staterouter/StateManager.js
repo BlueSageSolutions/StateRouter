@@ -111,6 +111,22 @@ Ext.define('StateRouter.staterouter.StateManager', {
         me.fireEvent('stateregistered', newState);
         return me;
     },
+    
+    merge: function (configOrName, updatedConfig) {
+        var newStateConfig = updatedConfig || {};
+
+        if (Ext.isObject(configOrName)) {
+            newStateConfig = configOrName;
+        } else if (Ext.isString(configOrName)) {
+            newStateConfig.name = configOrName;
+        }
+        var state = this.getState(newStateConfig.name);
+        if (!state) {
+            throw "State not found: " + newStateConfig.name;
+        }
+        newStateConfig = Ext.apply(state, newStateConfig);
+        this.register(newStateConfig);
+    },
 
     verifyAllParentsNavigable: function (state) {
         var parentState = state;

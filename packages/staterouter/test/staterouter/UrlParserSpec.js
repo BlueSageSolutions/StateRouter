@@ -30,7 +30,7 @@ describe('UrlParser', function() {
 
         expect(result).not.toBeUndefined();
         expect(result.regex).not.toBeUndefined();
-        expect(result.regex).toBe('^\\/contact\\/(\\w+)' + matchQueryParams);
+        expect(result.regex).toBe('^\\/contact\\/([^\\/]+)' + matchQueryParams);
         expect(new RegExp(result.regex).test('/contact/355')).toBe(true);
         expect(result.params.length).toBe(1);
         expect(result.params[0]).toBe('contactId');
@@ -41,7 +41,7 @@ describe('UrlParser', function() {
 
         expect(result).not.toBeUndefined();
         expect(result.regex).not.toBeUndefined();
-        expect(result.regex).toBe('^\\/contact\\/(\\w+)\\/edit\\/(\\w+)' + matchQueryParams);
+        expect(result.regex).toBe('^\\/contact\\/([^\\/]+)\\/edit\\/([^\\/]+)' + matchQueryParams);
         expect(new RegExp(result.regex).test('/contact/355/edit/abc')).toBe(true);
         expect(result.params.length).toBe(2);
         expect(result.params[0]).toBe('contactId');

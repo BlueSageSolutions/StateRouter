@@ -71,7 +71,7 @@ Ext.define('StateRouter.staterouter.UrlParser', {
             if (conditions && conditions[param]) {
                 result.regex += urlSegment + conditions[param];
             } else {
-                result.regex += urlSegment + '(\\w+)';
+                result.regex += urlSegment + '([^\\/]+)';
             }
 
             lastIndex = reg.lastIndex;
