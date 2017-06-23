@@ -45,13 +45,17 @@ Ext.define('StateRouter.staterouter.Router', {
         me.keep = 0;
         me.startFnName = 'start';
         me.stopFnName = 'stop';
-        me.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
     },
 
     configure: function (config) {
         var me = this;
-        me.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
         if (config) {
+            if (config.hasOwnProperty('transition')) {
+                me.transition = Ext.create(config.transition);
+            } else {
+                me.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
+            }
+
             if (config.hasOwnProperty('root')) {
                 me.root = config.root;
             }
