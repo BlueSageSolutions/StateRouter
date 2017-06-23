@@ -223,6 +223,83 @@ describe("Router", function() {
         });
     });
 
+    describe("Router edge cases", function () {
+        var router,originalTimeout;
+
+        beforeEach(function() {
+            originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+            jasmine.DEFAULT_TIMEOUT_INTERVAL = 3000;
+            router = Ext.create('StateRouter.staterouter.Router');
+        });
+
+        afterEach(function() {
+            jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
+        });
+
+        it("Transition should reject if currently transitioning", function (done) {
+            var c1 = {
+                    resolve: {
+                        blah: function (resolve) {
+                            resolve();
+                        }
+                    }
+                },
+                c2 = {
+                    resolve: {
+                        slowLoading: function (resolve, reject) {
+                            // We can even remove setTimeout here since transition takes multiple ticks
+                            setTimeout(function () {
+                                resolve();
+                            }, 1000);
+                        }
+                    }
+                },
+                bob = {};
+
+
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === 'c1') {
+                        return c1;
+                    } else if (name === 'c2') {
+                        return c2;
+                    } else if (name === 'bob') {
+                        return bob;
+                    }
+                    return null;
+                }
+            });
+            router.state('state1', { controller: 'c1'});
+            router.state('state1.home', { controller: 'c2'});
+            router.state('bob', { controller: 'bob'});
+
+            var p1 = new RSVP.Promise(function (resolve, reject) {
+                router.go('state1.home').then(function () {
+                    expect('Transition SHOULD occur').toBeDefined();
+                    resolve();
+                }).catch(function () {
+                    expect('Transition should not fail').toBeUndefined();
+                    resolve();
+                });
+            });
+
+            var p2 = new RSVP.Promise(function (resolve, reject) {
+                router.go('bob').then(function () {
+                    expect('Transition to Bob should not succeed').toBeUndefined();
+                    resolve();
+                }).catch(function (reason) {
+                    expect('Transition to Bob SHOULD FAIL').toBeDefined();
+                    expect(reason).toEqual(StateRouter.STATE_CHANGE_TRANSITIONING);
+                    resolve();
+                });
+            });
+
+            RSVP.all([p1, p2]).then(function () {
+                done();
+            });
+        });
+    });
+
     describe("Basic State Transitions", function() {
         var router;
 
@@ -393,6 +470,45 @@ describe("Router", function() {
             router.go('state1.home').then(function () {
                 expect(router.getCurrentState()).toBe('state1.home');
                 router.go('state1').then(function() {
+                    expect('Promise should not be resolved').toBeUndefined();
+                    done();
+                }).catch(function() {
+                    expect(router.getCurrentState()).toBe('state1.home');
+                    done();
+                });
+            });
+        });
+
+        it("should allow controllers to cancel a transition using the lifecycle method beforeStop", function (done) {
+            var c1 = {
+
+                },
+                c2 = {
+                    beforeStop: function (resolve, reject) {
+                        reject();
+                    }
+                };
+
+
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === 'c1') {
+                        return c1;
+                    }
+                    if (name === 'c2') {
+                        return c2;
+                    }
+                    return null;
+                }
+            });
+            router.state('state1', { controller: 'c1'});
+            router.state('state1.home', { controller: 'c2'});
+            router.go('state1.home').then(function () {
+                expect(router.getCurrentState()).toBe('state1.home');
+                router.go('state1').then(function() {
+                    expect('Promise should not be resolved').toBeUndefined();
+                    done();
+                }).catch(function(reason) {
                     expect(router.getCurrentState()).toBe('state1.home');
                     done();
                 });
@@ -462,7 +578,7 @@ describe("Router", function() {
             router.go('state1').then(function () {
                 return router.go('state2');
             }).then(function () {
-                console.log('will never reach here');
+                expect('should never reach here').toBeUndefined();
             }, function () {
                 expect(router.getCurrentState()).toBe(null);
                 expect(errorObj).not.toBeUndefined();
@@ -507,7 +623,7 @@ describe("Router", function() {
             });
             router.go('state1').then(function () {
                 router.go('state2').then(function () {
-                    console.log('will never reach here');
+                    expect('should never reach here').toBeUndefined();
                 }, function () {
                     expect(router.getCurrentState()).toBe(null);
                     expect(errorObj).not.toBeUndefined();
@@ -1032,7 +1148,7 @@ describe("Router", function() {
             }).then(function () {
                 expect(router.getCurrentState()).toBe('a.b.c');
                 return router.go('d');
-            }).then(function () {
+            }).catch(function () {
                 expect(router.getCurrentState()).toBe('a.b.c');
                 return router.go('d', {}, {force: true});
             }).then(function () {
