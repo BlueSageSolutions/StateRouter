@@ -1,2 +1,12 @@
 /ext/
 /build/
+
+
+# IntelliJ/Eclipse
+.idea/
+*.iml
+*.iws
+.classpath
+.project
+.settings/
+target-eclipse/
