@@ -305,7 +305,7 @@ Ext.define('StateRouter.staterouter.Router', {
             }
         }
         if (me.transitioning) {
-            return new RSVP.reject(StateRouter.STATE_CHANGE_TRANSITIONING);
+            return new RSVP.resolve({ success: false, errorCode: StateRouter.STATE_CHANGE_TRANSITIONING });
         }
 
         // Transitioning should be set to true immediately, even if the transition will be canceled. It's used
@@ -360,19 +360,18 @@ Ext.define('StateRouter.staterouter.Router', {
             }
 
             me.transitioning = false;
-            return new RSVP.resolve();
+            return new RSVP.resolve({ success: true });
         }).then(undefined, function (error) { // same as "catch", but safer since catch is reserved word
 
-            // It may have been rejected simply because they attempted to go to same place, simply resolve here
-            if (error === StateRouter.SAME_PLACE) {
+            if (error && error.errorCode) {
                 me.transitioning = false;
-                return new RSVP.resolve(false);
+                return new RSVP.resolve(Ext.apply({success: false, transition: transitionEvent}, error));
             }
 
             // TODO: On failure destroy view controllers from keep to end
             var errorEvent = Ext.apply({ error: error}, transitionEvent);
 
-            if (error && error !== StateRouter.STATE_CHANGE_CANCELED) {
+            if (error) {
                 me.notifyAll(StateRouter.STATE_CHANGE_FAILED, errorEvent);
                 me.currentPath = null;
                 Ext.callback(me.errorHandler, me, [errorEvent]);
@@ -432,7 +431,7 @@ Ext.define('StateRouter.staterouter.Router', {
             if (reload === false && this.toPath.isEqual(this.currentPath)) {
                 Ext.log('Asked to go to the same place');
                 // We reject here, but in transitionTo's "catch" we check for this error and resolve
-                return new RSVP.reject(StateRouter.SAME_PLACE);
+                return new RSVP.reject({ errorCode: StateRouter.SAME_PLACE });
             }
 
             this.calculateKeepPoint(reload);
@@ -784,10 +783,10 @@ Ext.define('StateRouter.staterouter.Router', {
     beforeStop: function (transitionEvent) {
         // TODO: The state change request event should be deprecated in favor of the beforeStop lifecycle method
         if (!this.notifyAll(StateRouter.STATE_CHANGE_REQUEST, transitionEvent)) {
-            return new RSVP.reject(StateRouter.STATE_CHANGE_CANCELED);
+            return new RSVP.reject({ errorCode: StateRouter.STATE_CHANGE_CANCELED });
         }
 
-        return this.executeLifecycleMethods(this.beforeStopFnName, [transitionEvent]);
+        return this.executeLifecycleMethods(this.beforeStopFnName, [transitionEvent], StateRouter.STATE_CHANGE_CANCELED);
     },
 
     createStopAndResolvePromise: function () {
@@ -798,10 +797,10 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     stopDiscardedControllers: function () {
-        return this.executeLifecycleMethods(this.stopFnName);
+        return this.executeLifecycleMethods(this.stopFnName, [], StateRouter.STATE_CHANGE_STOP_FAILED);
     },
 
-    executeLifecycleMethods: function (fnName, args) {
+    executeLifecycleMethods: function (fnName, args, errorCodeOnReject) {
         var me = this,
             i,
             fromPath,
@@ -812,7 +811,10 @@ Ext.define('StateRouter.staterouter.Router', {
         function chainPromise(theController) {
             r = r.then(function () {
                 return new RSVP.Promise(function (resolve, reject) {
-                    Ext.callback(theController[fnName], theController, [resolve, reject].concat(args));
+                    var rej = function (errorMsg) {
+                        reject({ errorCode: errorCodeOnReject, error: errorMsg});
+                    };
+                    Ext.callback(theController[fnName], theController, [resolve, rej].concat(args));
                 });
             });
         }
@@ -1125,6 +1127,7 @@ Ext.define('StateRouter.staterouter.Router', {
     StateRouter.STATE_CHANGE_CANCELED = 'stateChangeCanceled';
     StateRouter.STATE_CHANGE_FAILED = 'stateChangeFailed';
     StateRouter.STATE_CHANGE_TRANSITIONING = 'stateChangeTransitioning';
+    StateRouter.STATE_CHANGE_STOP_FAILED = 'stateChangeStopFailed';
     StateRouter.STATE_CHANGED = 'stateChanged';
     StateRouter.STATE_PATH_STARTING = 'statePathStarting';
     StateRouter.SAME_PLACE = 'Attempted to transition to the same place';
