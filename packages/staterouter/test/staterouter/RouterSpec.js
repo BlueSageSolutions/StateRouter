@@ -814,6 +814,37 @@ describe("Router", function() {
                 });
             });
         });
+
+        it("should allow you to get a handle on the current transition", function (done) {
+            router.state('state1', {
+                start: function (stateParams, stateName, resolve) {
+                    setTimeout(function () {
+                        resolve();
+                    }, 100);
+                }
+            });
+            router.state('state2', {});
+            router.go('state1');
+            router.getTransition().then(function () {
+                expect(router.getCurrentState()).toBe('state1');
+
+                router.go('state2').then(function () {
+                    expect(router.getCurrentState()).toBe('state2');
+                    done();
+                });
+            });
+        });
+
+        it("should allow you to nest transitions", function (done) {
+            router.state('state1', {});
+            router.state('state2', {});
+            router.go('state1').then(function () {
+                return router.go('state2');
+            }).then(function (result) {
+                expect(router.getCurrentState()).toBe('state2');
+                done();
+            });
+        });
     });
 
     describe("Controllers", function() {

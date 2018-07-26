@@ -23,12 +23,13 @@ Ext.define('StateRouter.staterouter.Router', {
     startFnName: null,
     stopFnName: null,
     beforeStopFnName: null,
-    transition: null,
+    transitionAnim: null,
 
     // Private state variables which change during transition
     keep: null,
     toPath: null,
     transitioning: false,
+    transition: null,
     ready: true,
     historyInitialized: false,
 
@@ -53,9 +54,9 @@ Ext.define('StateRouter.staterouter.Router', {
         var me = this;
         if (config) {
             if (config.hasOwnProperty('transition')) {
-                me.transition = Ext.create(config.transition);
+                me.transitionAnim = Ext.create(config.transition);
             } else {
-                me.transition = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
+                me.transitionAnim = Ext.create('StateRouter.staterouter.transitions.FadeTransition');
             }
 
             if (config.hasOwnProperty('root')) {
@@ -313,7 +314,7 @@ Ext.define('StateRouter.staterouter.Router', {
         // if we don't set it here, then it's possible a second transition may be completed before the first.
         me.transitioning = true;
 
-        return this.waitUntilHistoryReady().then(function () {
+        me.transition = this.waitUntilHistoryReady().then(function () {
             // Prepare path and call beforeStop lifecycle event
             return me.prepareTransition(newStateName, stateParams, reload, options);
         }).then(function (transitionEventResult) {
@@ -360,11 +361,13 @@ Ext.define('StateRouter.staterouter.Router', {
             }
 
             me.transitioning = false;
+            me.transition = null;
             return new RSVP.resolve({ success: true });
         }).then(undefined, function (error) { // same as "catch", but safer since catch is reserved word
 
             if (error && error.errorCode) {
                 me.transitioning = false;
+                me.transition = null;
                 return new RSVP.resolve(Ext.apply({success: false, transition: transitionEvent}, error));
             }
 
@@ -378,8 +381,11 @@ Ext.define('StateRouter.staterouter.Router', {
             }
 
             me.transitioning = false;
+            me.transition = null;
             return new RSVP.reject(error);
         });
+
+        return me.transition;
     },
 
     waitUntilHistoryReady: function () {
@@ -490,7 +496,7 @@ Ext.define('StateRouter.staterouter.Router', {
             this.keep < this.currentPath.nodes.length) {
 
             // The "old" view in this case is the first view discarded.
-            viewTransitionPromise = this.transition.transitionFrom(
+            viewTransitionPromise = this.transitionAnim.transitionFrom(
                 this.currentPath.nodes[this.keep].view,
                 combinedControllersPromise
             );
@@ -625,6 +631,10 @@ Ext.define('StateRouter.staterouter.Router', {
             return this.currentPath.lastNode().state.name;
         }
         return null;
+    },
+
+    getTransition: function () {
+        return this.transition;
     },
 
     getCurrentStateParams: function () {
@@ -1035,12 +1045,12 @@ Ext.define('StateRouter.staterouter.Router', {
                 });
             }
 
-            Ext.apply(viewConfig, me.transition.getAdditionalViewConfigOptions(pathNode, nodeIndex, this.keep, path));
+            Ext.apply(viewConfig, me.transitionAnim.getAdditionalViewConfigOptions(pathNode, nodeIndex, this.keep, path));
             // Create the child and insert it into the parent
             viewComponent = Ext.create(viewClass, viewConfig);
             parentComponent.add(viewComponent);
 
-            me.transition.transitionTo(viewComponent, pathNode, nodeIndex, this.keep, path);
+            me.transitionAnim.transitionTo(viewComponent, pathNode, nodeIndex, this.keep, path);
             pathNode.registerView(viewComponent);
         }
     },
@@ -1111,6 +1121,10 @@ Ext.define('StateRouter.staterouter.Router', {
 
     StateRouter.getCurrentStateParams = function() {
         return StateRouter.Router.getCurrentStateParams();
+    };
+
+    StateRouter.getTransition = function() {
+        return StateRouter.Router.getTransition();
     };
 
     StateRouter.getStateManager = function () {
