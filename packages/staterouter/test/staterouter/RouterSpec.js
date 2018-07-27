@@ -814,11 +814,18 @@ describe("Router", function() {
         });
 
         it("should allow you to get a handle on the current transition", function (done) {
+            router.configure({
+                controllerProvider: function (controller) {
+                    return controller;
+                }
+            });
             router.state('state1', {
-                start: function (stateParams, stateName, resolve) {
-                    setTimeout(function () {
-                        resolve();
-                    }, 100);
+                controller: {
+                    start: function (stateParams, stateName, resolve) {
+                        setTimeout(function () {
+                            resolve();
+                        }, 100);
+                    }
                 }
             });
             router.state('state2', {});
@@ -840,6 +847,28 @@ describe("Router", function() {
                 return router.go('state2');
             }).then(function (result) {
                 expect(router.getCurrentState()).toBe('state2');
+                done();
+            });
+        });
+
+        it("should return a Promise from reload", function (done) {
+            var count = 0;
+            router.configure({
+                controllerProvider: function (controller) {
+                    return controller;
+                }
+            });
+            router.state('state1', {
+                controller: {
+                    start: function () {
+                        count++;
+                    }
+                }
+            });
+            router.go('state1').then(function () {
+                return router.reload();
+            }).then(function () {
+                expect(count).toBe(2);
                 done();
             });
         });

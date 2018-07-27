@@ -208,8 +208,8 @@ Ext.define('StateRouter.staterouter.Router', {
      */
     reload: function (options) {
         var opts = options || {};
-        StateRouter.go(StateRouter.getCurrentState(), {}, Ext.apply({
-            reload: StateRouter.getCurrentState(),
+        return this.go(this.getCurrentState(), {}, Ext.apply({
+            reload: this.getCurrentState(),
             force: true
         }, opts));
     },
