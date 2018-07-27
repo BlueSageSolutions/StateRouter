@@ -300,7 +300,7 @@ describe("Router", function() {
             });
         });
 
-        it("should allow a stop to reject (APP LEFT IN UNKNOWN STATE)", function (done) {
+        it("should allow a stop to reject", function (done) {
             router.configure({controllerProvider: function (name) {
                     if (name === 'Old') {
                         return {
@@ -315,12 +315,10 @@ describe("Router", function() {
             router.state('new', {controller: 'New'});
             router.go('old').then(function (result) {
                 expect(result.success).toBe(true);
-                router.go('new').then(function (result2) {
-                    expect(result2.success).toBe(false);
-                    expect(result2.errorCode).toBe(StateRouter.STATE_CHANGE_STOP_FAILED);
-                    expect(router.getCurrentState()).toBe('old');
-                    done();
-                });
+                return router.go('new');
+            }).then(undefined, function (error) {
+                expect(error).toBe('Something bad happened');
+                done();
             });
         });
     });

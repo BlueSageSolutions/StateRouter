@@ -807,7 +807,7 @@ Ext.define('StateRouter.staterouter.Router', {
     },
 
     stopDiscardedControllers: function () {
-        return this.executeLifecycleMethods(this.stopFnName, [], StateRouter.STATE_CHANGE_STOP_FAILED);
+        return this.executeLifecycleMethods(this.stopFnName);
     },
 
     executeLifecycleMethods: function (fnName, args, errorCodeOnReject) {
@@ -821,9 +821,14 @@ Ext.define('StateRouter.staterouter.Router', {
         function chainPromise(theController) {
             r = r.then(function () {
                 return new RSVP.Promise(function (resolve, reject) {
-                    var rej = function (errorMsg) {
-                        reject({ errorCode: errorCodeOnReject, error: errorMsg});
-                    };
+
+                    var rej = reject;
+
+                    if (errorCodeOnReject) {
+                        rej = function (errorMsg) {
+                            reject({ errorCode: errorCodeOnReject, error: errorMsg});
+                        };
+                    }
                     Ext.callback(theController[fnName], theController, [resolve, rej].concat(args));
                 });
             });
@@ -1141,7 +1146,6 @@ Ext.define('StateRouter.staterouter.Router', {
     StateRouter.STATE_CHANGE_CANCELED = 'stateChangeCanceled';
     StateRouter.STATE_CHANGE_FAILED = 'stateChangeFailed';
     StateRouter.STATE_CHANGE_TRANSITIONING = 'stateChangeTransitioning';
-    StateRouter.STATE_CHANGE_STOP_FAILED = 'stateChangeStopFailed';
     StateRouter.STATE_CHANGED = 'stateChanged';
     StateRouter.STATE_PATH_STARTING = 'statePathStarting';
     StateRouter.SAME_PLACE = 'Attempted to transition to the same place';
