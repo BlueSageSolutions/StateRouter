@@ -70,26 +70,16 @@ Ext.define('StateRouter.staterouter.transitions.FadeTransition', {
     getAdditionalViewConfigOptions: function (pathNode, nodeIndex, keep, path) {
         var options = {};
 
-        // Hide the first child we're creating, the ancestor of
-        // any other children being added in this transition
-        // this is so we can transition from 0 to 100% opacity
-        // without the view being visible for few milliseconds
         if (nodeIndex === keep) {
-            options.hidden = true;
+            options.style = {
+              opacity: 0
+            };
         }
 
         return options;
     },
 
     transitionTo: function (newViewComponent, pathNode, nodeIndex, keep, path) {
-
-        // TODO: we should only do this for the top-level child we're adding
-        // just like getAdditionalViewConfigOptions
-        // TODO: How should the generic transition API work?  Do we only pass in this
-        // top level or is there some need for other types of transitions
-        // to transition other nodes?
-        newViewComponent.getEl().setOpacity(0);
-        newViewComponent.show();
         newViewComponent.animate({
             from: {
                 opacity: 0

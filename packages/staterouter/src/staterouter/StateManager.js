@@ -65,6 +65,7 @@ Ext.define('StateRouter.staterouter.StateManager', {
             }
 
             newState.parent = me.states[parentStateName];
+            newState.parent.leaf = false;
             newState.depth = newState.parent.depth + 1;
         }
 

@@ -815,6 +815,7 @@ Ext.define('StateRouter.staterouter.Router', {
             i,
             fromPath,
             controller,
+            view,
             r;
         args = args || [];
 
@@ -842,9 +843,14 @@ Ext.define('StateRouter.staterouter.Router', {
             // Stop in reverse order
             for (i = fromPath.length - 1; i >= this.keep; i--) {
                 controller = fromPath[i].controller;
+                view = fromPath[i].view;
 
                 if (controller && Ext.isFunction(controller[fnName])) {
                     chainPromise(controller);
+                }
+
+                if (view && Ext.isFunction(view[fnName])) {
+                    chainPromise(view);
                 }
             }
         }
@@ -952,6 +958,63 @@ Ext.define('StateRouter.staterouter.Router', {
         this.toPath.allParams = this.toPath.lastNode().allParams;
     },
 
+    createNewViews: function () {
+        var me = this,
+            toPath = this.toPath.nodes,
+            i,
+            pathNode,
+            state,
+            viewToApplyTransition = null;
+
+        var promise = RSVP.resolve();
+
+        function chainViewReadyPromise(_pathNode, _i) {
+            promise = promise.then(function () {
+                var viewInstance = me.insertChildIntoParentView(_pathNode, _i, toPath);
+
+                if (!viewToApplyTransition && viewInstance) {
+                    viewToApplyTransition = viewInstance;
+                }
+
+                if (viewInstance && viewInstance.mountVue) {
+                    return viewInstance.mountVue().then(function (elemId) {
+                        return new RSVP.Promise(function (resolve) {
+                            _pathNode.registerView(viewInstance, elemId);
+                            resolve();
+                        });
+                    });
+                } else if (viewInstance) {
+                    return new RSVP.Promise(function (resolve) {
+                        _pathNode.registerView(viewInstance);
+                        resolve();
+                    });
+                } else {
+                    return new RSVP.resolve();
+                }
+            });
+        }
+
+        for (i = this.keep; i < toPath.length; i++) {
+            pathNode = toPath[i];
+            state = pathNode.state;
+
+            // Notify all ancestors of the toPath's path that a new state is being activated
+            me.doNotify(StateRouter.STATE_PATH_STARTING, {
+                state: state.name
+            }, 0, i, toPath);
+
+            chainViewReadyPromise(pathNode, i);
+        }
+
+        promise.then(function () {
+            if (viewToApplyTransition) {
+                me.transitionAnim.transitionTo(viewToApplyTransition);
+            }
+        });
+
+        return promise;
+    },
+
     startNewControllers: function () {
         var me = this,
             toPath = this.toPath.nodes,
@@ -961,7 +1024,7 @@ Ext.define('StateRouter.staterouter.Router', {
             controller,
             autoResolve;
 
-        var promise = RSVP.resolve();
+        var promise = this.createNewViews();
 
         function chainStartPromise(theController, allParams, stateName, autoResolve) {
             promise = promise.then(function () {
@@ -982,13 +1045,6 @@ Ext.define('StateRouter.staterouter.Router', {
 
             // Get the controller and call its start method
             controller = pathNode.controller;
-
-            // Notify all ancestors of the toPath's path that a new state is being activated
-            me.doNotify(StateRouter.STATE_PATH_STARTING, {
-                state: state.name
-            }, 0, i, toPath);
-
-            me.insertChildIntoParentView(pathNode, i, toPath);
 
             if (controller) {
                 controller.stateName = state.name;
@@ -1035,7 +1091,9 @@ Ext.define('StateRouter.staterouter.Router', {
             if (!parentComponent) {
                 parentComponent = Ext.getCmp(this.root);
             }
-            parentComponent.removeAll();
+            if (!Ext.isString(parentComponent)) {
+                parentComponent.removeAll();
+            }
 
             Ext.apply(viewConfig, {
                 toParams: allParams,
@@ -1043,6 +1101,10 @@ Ext.define('StateRouter.staterouter.Router', {
                 allResolved: previouslyResolved,
                 stateName: state.name
             });
+
+            if (Ext.isString(parentComponent)) {
+                viewConfig.renderTo = parentComponent;
+            }
 
             if (state.viewController) {
                 Ext.apply(viewConfig, {
@@ -1053,10 +1115,13 @@ Ext.define('StateRouter.staterouter.Router', {
             Ext.apply(viewConfig, me.transitionAnim.getAdditionalViewConfigOptions(pathNode, nodeIndex, this.keep, path));
             // Create the child and insert it into the parent
             viewComponent = Ext.create(viewClass, viewConfig);
-            parentComponent.add(viewComponent);
 
-            me.transitionAnim.transitionTo(viewComponent, pathNode, nodeIndex, this.keep, path);
-            pathNode.registerView(viewComponent);
+            if (!Ext.isString(parentComponent)) {
+                parentComponent.removeAll();
+                parentComponent.add(viewComponent);
+            }
+
+            return viewComponent;
         }
     },
 
