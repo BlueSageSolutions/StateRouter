@@ -45,7 +45,7 @@ Ext.define('StateRouter.staterouter.PathNode', {
      *
      * @param viewComponent
      */
-    registerView: function (viewComponent) {
+    registerView: function (viewComponent, elemId) {
         if (viewComponent) {
 
             this.view = viewComponent;
@@ -54,15 +54,16 @@ Ext.define('StateRouter.staterouter.PathNode', {
             // view will be swapped out or it will have a child which will act
             // as the container for nested children.
 
-            if (viewComponent.routerView) {
+            if (elemId && Ext.isString(elemId)) {
+                this.containerForChildren = elemId;
+            } else if (viewComponent.routerView) {
                 this.containerForChildren = viewComponent;
-            } else {
+            } else if (viewComponent && viewComponent.down) {
                 this.containerForChildren = viewComponent.down('container[routerView]');
-
-                // TODO: The following comment doesn't really make sense. How can a child state use a parent view?
-                // If this state is not a leaf and it does not define a routerView,
-                // then some parent will be the child view insertion point
             }
+
+            // TODO: If state is not a leaf and it does not define a routerView, it's an error but we're not
+            // handling this right now
         }
     }
 });

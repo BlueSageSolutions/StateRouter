@@ -14,6 +14,7 @@ Ext.define('StateRouter.staterouter.State', {
     urlParams: [], // URL positioned params
     queryParams: [], // query params
     conditions: {},
+    leaf: true,
 
     constructor: function (config) {
         Ext.apply(this, config);
