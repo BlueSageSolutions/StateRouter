@@ -19,6 +19,25 @@ Ext.define('StateRouter.staterouter.PathPromiseResolver', {
             pathNode.resolved = resolved;
             pathNode.allResolved = allResolved;
 
+            if (pathNode.state && pathNode.state.resolve) {
+                // Create a new promise for each resolvable and add it to the promises array
+                Ext.Object.each(pathNode.state.resolve, function (key, resolveFn) {
+                    if (Ext.isFunction(resolveFn)) {
+
+                        var promise = new RSVP.Promise(function (resolve, reject) {
+                            // Wrap the success in another callback so we can store the result in the controller
+                            var successCallback = function (results) {
+                                resolved[key] = results;
+                                resolve(results);
+                            };
+
+                            Ext.callback(resolveFn, pathNode, [successCallback, reject, pathNode.allParams, previouslyResolved]);
+                        });
+                        promises.push(promise);
+                    }
+                });
+            }
+
             if (controller) {
                 controller.stateName = stateName;
                 controller.resolved = resolved;

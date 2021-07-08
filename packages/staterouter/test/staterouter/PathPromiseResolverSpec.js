@@ -76,6 +76,35 @@ describe("PathPromiseResolver", function() {
         });
     });
 
+    it("should resolve a single path with resolvables in states", function(done) {
+        var path = [];
+
+        stateManager.register({name: 'main', resolve: {
+                one: function (resolve) {
+                    resolve('one');
+                },
+                two: function (resolve) {
+                    resolve('two');
+                }
+            }});
+
+        path.push(Ext.create('StateRouter.staterouter.PathNode', {
+            state: stateManager.getState('main'),
+        }));
+
+        var p = resolver.createResolvePromise(path, 0);
+        p.then(function () {
+            expect(path[0].resolved).not.toBeUndefined();
+            expect(path[0].resolved.one).toBe('one');
+            expect(path[0].resolved.two).toBe('two');
+            expect(path[0].allResolved).not.toBeUndefined();
+            expect(path[0].allResolved.main).not.toBeUndefined();
+            expect(path[0].allResolved.main.one).toBe('one');
+            expect(path[0].allResolved.main.two).toBe('two');
+            done();
+        });
+    });
+
     it("should not resolve kept states", function(done) {
         var path = [],
             count = 0,

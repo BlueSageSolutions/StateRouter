@@ -5,6 +5,7 @@ Ext.define('StateRouter.staterouter.Router', {
         'StateRouter.staterouter.Path',
         'StateRouter.staterouter.StateManager',
         'StateRouter.staterouter.transitions.FadeTransition',
+        'StateRouter.staterouter.transitions.QuickTransition',
         'StateRouter.staterouter.transitions.BaseViewTransition',
         'StateRouter.staterouter.UrlParser'
     ],
@@ -332,6 +333,8 @@ Ext.define('StateRouter.staterouter.Router', {
                 historyPromise = me.updateAddressBar();
             }
 
+            me.notifyAll(StateRouter.RESOLVABLES_LOADED, me.toPath.lastNode().allResolved);
+
             // Enter the new controllers
             var startPromise = me.startNewControllers();
 
@@ -345,6 +348,7 @@ Ext.define('StateRouter.staterouter.Router', {
             // state at this point (after forwardToChild is executed)
             transitionEvent.toState = me.toPath.lastNode().state.name;
             transitionEvent.toParams = me.toPath.lastNode().allParams;
+            transitionEvent.allResolved = me.toPath.lastNode().allResolved;
 
 
             // It's possible the controllers notified below or any code using the wrapped promise
@@ -1210,6 +1214,7 @@ Ext.define('StateRouter.staterouter.Router', {
     StateRouter.STATE_CHANGE_REQUEST = 'stateChangeRequest';
     StateRouter.STATE_CHANGE_CANCELED = 'stateChangeCanceled';
     StateRouter.STATE_CHANGE_FAILED = 'stateChangeFailed';
+    StateRouter.RESOLVABLES_LOADED = 'resolvablesLoaded';
     StateRouter.STATE_CHANGE_TRANSITIONING = 'stateChangeTransitioning';
     StateRouter.STATE_CHANGED = 'stateChanged';
     StateRouter.STATE_PATH_STARTING = 'statePathStarting';

@@ -16,6 +16,9 @@ Ext.define('StateRouter.staterouter.transitions.FadeTransition', {
             }
 
             // Animate it to opacity zero
+            if (oldViewComponent.mountId) {
+                oldViewComponent = Ext.fly(oldViewComponent.mountId);
+            }
             oldViewComponent.animate({
                 to: {
                     opacity: 0
@@ -68,7 +71,9 @@ Ext.define('StateRouter.staterouter.transitions.FadeTransition', {
     },
 
     getAdditionalViewConfigOptions: function (pathNode, nodeIndex, keep, path) {
-        var options = {};
+        var options = {
+            transitionDuration: 250,
+        };
 
         if (nodeIndex === keep) {
             options.style = {
@@ -80,6 +85,9 @@ Ext.define('StateRouter.staterouter.transitions.FadeTransition', {
     },
 
     transitionTo: function (newViewComponent, pathNode, nodeIndex, keep, path) {
+        if (newViewComponent.mountId) {
+            newViewComponent = Ext.fly(newViewComponent.mountId);
+        }
         newViewComponent.animate({
             from: {
                 opacity: 0
