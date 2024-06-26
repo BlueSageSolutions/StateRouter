@@ -1,6 +1,6 @@
 /ext/
 /build/
-
+.DS_Store
 
 # IntelliJ/Eclipse
 .idea/
