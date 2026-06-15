@@ -701,6 +701,66 @@ describe("Router", function() {
             });
         });
 
+        it("should roll back to the kept parent (not null) when a child transition fails, avoiding parent re-resolve", function (done) {
+            var parentResolveCount = 0,
+                c1 = {
+                    resolve: {
+                        parentData: function (resolve) {
+                            parentResolveCount++;
+                            resolve();
+                        }
+                    }
+                },
+                cFail = {
+                    resolve: {
+                        childData: function (resolve, reject) {
+                            reject('child resolve failed');
+                        }
+                    }
+                },
+                cOk = {};
+
+            router.configure({
+                controllerProvider: function (name) {
+                    if (name === 'c1') { return c1; }
+                    if (name === 'cFail') { return cFail; }
+                    if (name === 'cOk') { return cOk; }
+                    return null;
+                }
+            });
+            router.state('state1', { controller: 'c1' });
+            router.state('state1.fail', { controller: 'cFail' });
+            router.state('state1.ok', { controller: 'cOk' });
+
+            router.go('state1').then(function () {
+                expect(router.getCurrentState()).toBe('state1');
+                expect(parentResolveCount).toBe(1);
+
+                // Navigate into a child whose resolve rejects (mirrors a sub-page 403)
+                return router.go('state1.fail');
+            }).then(function () {
+                expect('child transition should have failed').toBeUndefined();
+                done();
+            }, function () {
+                // The failed child transition must leave the kept parent as the current
+                // state rather than nulling currentPath. Nulling it would force the next
+                // navigation to re-resolve the whole tree from the root, re-running the
+                // parent's resolver (the real-world bug: openLoan re-called after a 403).
+                expect(router.getCurrentState()).toBe('state1');
+                expect(parentResolveCount).toBe(1);
+
+                // A subsequent sibling navigation keeps the parent and does NOT re-resolve it
+                router.go('state1.ok').then(function () {
+                    expect(router.getCurrentState()).toBe('state1.ok');
+                    expect(parentResolveCount).toBe(1);
+                    done();
+                }, function () {
+                    expect('sibling navigation should succeed').toBeUndefined();
+                    done();
+                });
+            });
+        });
+
         it("should allow you to transition any state to another state", function (done) {
             router.state('state1', {});
             router.state('state1.home', {});

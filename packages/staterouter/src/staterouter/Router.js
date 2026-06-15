@@ -315,6 +315,12 @@ Ext.define('StateRouter.staterouter.Router', {
         // if we don't set it here, then it's possible a second transition may be completed before the first.
         me.transitioning = true;
 
+        // Reset per-transition state up front so that if this transition fails before
+        // prepareTransition runs, the failure handler below can't roll currentPath back
+        // using a stale toPath/keep left over from a previous transition.
+        me.toPath = null;
+        me.keep = 0;
+
         me.transition = this.waitUntilHistoryReady().then(function () {
             // Prepare path and call beforeStop lifecycle event
             return me.prepareTransition(newStateName, stateParams, reload, options);
@@ -380,7 +386,23 @@ Ext.define('StateRouter.staterouter.Router', {
 
             if (error) {
                 me.notifyAll(StateRouter.STATE_CHANGE_FAILED, errorEvent);
-                me.currentPath = null;
+
+                // On a failed transition, roll currentPath back to the kept prefix instead
+                // of discarding it. The first `keep` nodes of toPath are the kept,
+                // still-started controllers (calculateKeepPoint reuses the previous path's
+                // nodes), so they remain a valid current location. Nulling currentPath
+                // would instead force the next navigation to re-resolve the whole tree from
+                // the root, re-running parent-state resolvers (e.g. re-calling openLoan
+                // after a child sub-page returns 403).
+                if (me.keep > 0 && me.toPath && me.toPath.nodes.length >= me.keep) {
+                    me.currentPath = Ext.create('StateRouter.staterouter.Path', {
+                        nodes: me.toPath.nodes.slice(0, me.keep)
+                    });
+                    me.updateAllParamsForPath(me.currentPath);
+                } else {
+                    me.currentPath = null;
+                }
+
                 Ext.callback(me.errorHandler, me, [errorEvent]);
             }
 
